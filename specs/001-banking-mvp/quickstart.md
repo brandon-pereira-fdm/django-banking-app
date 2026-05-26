@@ -20,7 +20,7 @@ python -m pip install --upgrade pip
 ## Install Minimal Dependencies
 
 ```bash
-pip install Django waitress
+pip install -r requirements.txt
 ```
 
 No frontend framework, REST framework, CSS framework, payment SDK, queue, cloud
@@ -77,6 +77,29 @@ python -m waitress --listen=127.0.0.1:8000 bankapp.wsgi:application
 ```
 
 Open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Implementation Verification
+
+Verification performed on 2026-05-25:
+
+- `python manage.py check`: passed.
+- `python manage.py makemigrations --check --dry-run`: passed with no changes
+  detected.
+- `python manage.py migrate`: passed on SQLite.
+- `python manage.py collectstatic --noinput`: passed.
+- `python manage.py test`: 44 tests passed.
+- Django development server responded locally at `/login/`.
+- Waitress responded locally at `/login/`.
+
+## Safety Notice
+
+This application is a local learning MVP. It is not real banking software, does
+not move real money, has no external banking integration, and is not suitable
+for public production use.
 
 ```text
 http://127.0.0.1:8000/

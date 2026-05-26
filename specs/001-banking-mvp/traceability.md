@@ -58,3 +58,54 @@
   completed transaction record creation.
 - Every failed, rejected, cancelled, or PENDING path must test unchanged
   balances and absence of completed financial movement records.
+
+## Implementation Traceability Update
+
+Updated on 2026-05-25 after implementation.
+
+### Implemented Component Paths
+
+- Project configuration: `bankapp/settings.py`, `bankapp/urls.py`,
+  `bankapp/wsgi.py`, `bankapp/waitress_server.py`.
+- User identity: `users/models.py`, `users/managers.py`, `users/forms.py`,
+  `users/views.py`, `users/urls.py`, `users/admin.py`.
+- Banking domain: `banking/models.py`, `banking/services.py`,
+  `banking/forms.py`, `banking/views.py`, `banking/urls.py`,
+  `banking/admin.py`.
+- Templates: `templates/public_base.html`, `templates/base.html`,
+  `templates/users/`, `templates/banking/`, `templates/components/`.
+- Styling: `static/css/app.css`.
+- Migrations: `users/migrations/0001_initial.py`,
+  `banking/migrations/0001_initial.py`, `banking/migrations/0002_initial.py`.
+- Tests: `users/tests.py` and `banking/tests/`.
+
+### Test Modules
+
+- Authentication and registration: `users/tests.py`.
+- Money validation: `banking/tests/test_money_validation.py`.
+- Account models and constraints: `banking/tests/test_models_accounts.py`,
+  `test_models_transactions.py`, `test_models_transfers.py`,
+  `test_models_approvals.py`.
+- Personal and Business account creation: `test_personal_accounts.py`,
+  `test_business_accounts.py`, `test_business_account_atomicity.py`.
+- Deposits, withdrawals, transfers, approvals, histories, access, and UI:
+  `test_deposits.py`, `test_withdrawals.py`, `test_transfers_resolution.py`,
+  `test_personal_transfers.py`, `test_business_withdrawal_requests.py`,
+  `test_business_transfer_requests.py`, `test_approval_visibility.py`,
+  `test_approvals_resolution.py`, `test_approvals_views.py`,
+  `test_multiple_pending_requests.py`, `test_histories.py`,
+  `test_history_access_control.py`, `test_dashboard_ui.py`,
+  `test_transfer_views.py`, `test_ui_polish.py`, and `test_security.py`.
+
+### Verification Log
+
+- `python manage.py check`: passed.
+- `python manage.py makemigrations --check --dry-run`: passed with no changes
+  detected.
+- `python manage.py migrate`: passed on SQLite.
+- `python manage.py collectstatic --noinput`: passed.
+- `python manage.py test`: 44 tests passed.
+- Django runserver local smoke: `/login/` returned HTTP 200.
+- Waitress local smoke: `/login/` returned HTTP 200.
+
+No unresolved implementation blockers remain within the approved MVP scope.

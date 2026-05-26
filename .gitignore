@@ -1,27 +1,29 @@
-# Python
+.DS_Store
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
 .Python
-
-# Virtual environments
 .venv/
 venv/
 env/
-
-# Django/local deployment
-db.sqlite3
-*.sqlite3
-staticfiles/
-
-# Secrets and local configuration
+ENV/
+dist/
+build/
+*.egg-info/
 .env
 .env.*
-!.env.example
 local_settings.py
-secrets.json
-
-# macOS/editor noise
-.DS_Store
+secrets.*
+db.sqlite3
+db.sqlite3-*
+*.sqlite3
+staticfiles/
+coverage/
+.coverage
+.pytest_cache/
+.mypy_cache/
 .idea/
 .vscode/
+*.log
+*.tmp
+*.swp

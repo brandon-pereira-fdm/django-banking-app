@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="page-header"><h1>Approvals</h1><p>Business outgoing workflow records are separate from completed transactions.</p></section>
+<form method="get" class="filter-form">{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endfor %}<button class="button secondary" type="submit">Filter</button></form>
+<section class="panel">
+{% for approval in approval_requests %}
+  <article class="approval-row">
+    <a href="{% url 'approval_detail' approval.request_id %}">{{ approval.get_request_type_display }}</a>
+    <span>{{ approval.amount|sgd }}</span>
+    {% include "components/status_badge.html" with status=approval.status %}
+    {% if approval.recipient_account %}<small>Recipient: {{ approval.recipient_account.display_name }} ({{ approval.recipient_account.get_account_type_display }})</small>{% endif %}
+  </article>
+{% empty %}
+  <p class="muted">No approval records match this view.</p>
+{% endfor %}
+</section>
+{% endblock %}

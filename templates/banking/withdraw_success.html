@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% load banking_extras %}
+{% block content %}<h1>Withdrawal Completed</h1><p>{{ transaction.amount|sgd }} debited.</p><p>Transaction ID: {{ transaction.transaction_id }}</p>{% endblock %}

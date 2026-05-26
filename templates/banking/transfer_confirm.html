@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Confirm Transfer</h1>
+<section class="summary">
+  <p><span>Sender</span><strong>{{ preview.sender }}</strong></p>
+  <p><span>Recipient</span><strong>{{ preview.recipient_label }} ({{ preview.recipient.get_account_type_display }})</strong></p>
+  <p><span>Identifier</span><strong>{{ preview.recipient_identifier }}</strong></p>
+  <p><span>Amount</span><strong>{{ preview.amount|sgd }}</strong></p>
+  <p><span>Approval</span><strong>{% if preview.approval_required %}Required - request will be PENDING{% else %}Not required - completes immediately{% endif %}</strong></p>
+</section>
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="source_account" value="{{ preview.sender.pk }}">
+  <input type="hidden" name="recipient_type" value="{{ preview.recipient.account_type }}">
+  <input type="hidden" name="identifier" value="{{ preview.recipient.receiving_identifier }}">
+  <input type="hidden" name="amount" value="{{ preview.amount }}">
+  <button class="button" name="confirm" value="1" type="submit">Submit Transfer</button>
+</form>
+{% endblock %}

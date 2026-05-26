@@ -1,0 +1,27 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Midnight Ledger</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="public-page">
+  <main class="auth-wrap">
+    <section class="auth-brand" aria-label="Midnight Ledger">
+      <p class="eyebrow">Local SGD banking MVP</p>
+      <h1>Midnight Ledger</h1>
+      <p>Personal and business accounts with careful approvals, precise records, and calm control.</p>
+    </section>
+    <section class="auth-panel">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</body>
+</html>

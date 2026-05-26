@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Confirm Deposit</h1>
+<section class="summary"><p><span>Account</span><strong>{{ data.account }}</strong></p><p><span>Amount</span><strong>{{ data.amount|sgd }}</strong></p></section>
+<form method="post">{% csrf_token %}<input type="hidden" name="account" value="{{ data.account.pk }}"><input type="hidden" name="amount" value="{{ data.amount }}"><button class="button" name="confirm" value="1" type="submit">Complete Deposit</button></form>
+{% endblock %}

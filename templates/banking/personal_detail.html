@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="page-header"><h1>Personal Account</h1><p>Receiving phone number: {{ account.phone_number|mask }}</p></section>
+{% include "components/account_card.html" with account=account %}
+<section class="quick-actions"><a class="button" href="{% url 'deposit' %}">Deposit</a><a class="button secondary" href="{% url 'withdraw' %}">Withdraw</a><a class="button secondary" href="{% url 'transfer' %}">Transfer</a></section>
+<section class="panel"><h2>Recent Transactions</h2>{% for transaction in transactions %}{% include "components/transaction_row.html" %}{% empty %}<p class="muted">No completed Personal Account transactions yet.</p>{% endfor %}</section>
+{% endblock %}

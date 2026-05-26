@@ -1,0 +1,42 @@
+{% load static banking_extras %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Midnight Ledger{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}">Midnight Ledger</a>
+      <nav class="nav-list">
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'personal_detail' %}">Personal Account</a>
+        <a href="{% url 'business_detail' %}">Business Account</a>
+        <a href="{% url 'transfer' %}">Transfer</a>
+        <a href="{% url 'approvals' %}">Approvals</a>
+        <a href="{% url 'transactions' %}">Transactions</a>
+      </nav>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar">
+        <span class="user-pill">{{ request.user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="ghost-button">Sign out</button>
+        </form>
+      </header>
+      <main class="content">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

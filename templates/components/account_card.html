@@ -1,0 +1,12 @@
+{% load banking_extras %}
+<article class="account-card {{ account.account_type|lower }}">
+  <p class="eyebrow">{{ account.get_account_type_display }}</p>
+  <h2>{{ account.display_name }}</h2>
+  <p class="balance">{{ account.balance|sgd }}</p>
+  <p class="identifier">Receiving identifier: {{ account.receiving_identifier|mask }}</p>
+  {% if account.account_type == "BUSINESS" %}
+    <p class="notice">Retained minimum after outgoing transactions: SGD 7,000.00</p>
+  {% else %}
+    <p class="notice">No minimum balance. Overdrafts are not permitted.</p>
+  {% endif %}
+</article>

@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+{% url 'business_setup' as business_url %}
+{% include "components/empty_state.html" with title="No Business Account yet" message="Open one with a business display name, unique UEN, and at least SGD 7,000.00." action_url=business_url action_label="Open Business Account" %}
+{% endblock %}
