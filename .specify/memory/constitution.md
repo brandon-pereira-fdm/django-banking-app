@@ -1,26 +1,35 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 -> 1.1.0
+Version change: 1.1.0 -> 2.0.0
 Modified principles:
-- III. Account Types and User Identity -> III. Account Types and Recipient Identity
-- V. Business Account Opening and Balance Rules -> V. Business Account Opening and Balance Rules
-- VII. Transfers and Linked Transaction Records -> VII. Transfers and Linked Transaction Records
-- VIII. Business Account Authorisation -> VIII. Business Account Authorisation
-- XI. Automated Testing and Quality Gates -> XI. Automated Testing and Quality Gates
-- XIII. Governance and SDD Compliance -> XIII. Governance and SDD Compliance
+- III. Account Types and Recipient Identity -> III. Separate Login Identities and Account Experiences
+- IV. Personal Account Rules -> IV. Personal Account Model
+- V. Business Account Opening and Balance Rules -> V. Business Account and Business User Model
+- VIII. Business Account Authorisation -> VIII. Business Membership Roles and Authorisation
+- XI. Automated Testing and Quality Gates -> XII. Automated Testing and Quality Gates
+- XIII. Governance and SDD Compliance -> XIV. Governance and SDD Compliance
 Added sections:
-- Amendment 1.1.0 Recipient and Approval Governance
+- VI. Business Account Membership and Invitations
+- VII. Business Account Access Audit History
+- X. Transaction, Approval, and Access History Separation
+- Amendment 2.0.0 Separate Identity and Business Membership Governance
 Removed sections:
-- None
+- Amendment 1.1.0 Recipient and Approval Governance as standalone current
+  amendment text; preserved non-conflicting recipient and approval rules inside
+  core principles.
 Templates requiring updates:
-- [x] .specify/templates/plan-template.md
-- [x] .specify/templates/spec-template.md
-- [x] .specify/templates/tasks-template.md
-- [x] .specify/templates/checklist-template.md
+- .specify/templates/plan-template.md: pending by explicit user request to
+  produce the amended constitution only.
+- .specify/templates/spec-template.md: pending by explicit user request to
+  produce the amended constitution only.
+- .specify/templates/tasks-template.md: pending by explicit user request to
+  produce the amended constitution only.
+- .specify/templates/checklist-template.md: pending by explicit user request
+  to produce the amended constitution only.
 Follow-up TODOs:
-- Current feature specification and checklist must be updated to replace
-  phone-only Business Account transfers with UEN-based Business Account
-  transfers before planning.
+- Update specification, checklist, plan, data model, contracts, tasks,
+  traceability, and implementation code to remove the superseded one-user,
+  own-Personal-authoriser Business Account model.
 -->
 # BankApp Constitution
 
@@ -33,183 +42,321 @@ MUST be restricted to Singapore Dollars (SGD) only.
 
 The MVP MUST NOT introduce alternative databases, frontend frameworks, payment
 gateways, external bank integrations, cloud infrastructure, microservices,
-message queues, or third-party authentication systems.
+message queues, WebSockets, third-party authentication systems, OTP verification,
+or external UEN registry verification without constitutional amendment.
 
-The MVP scope MUST remain limited to user registration, authentication, personal
-accounts, business accounts, deposits, withdrawals, transfers, transaction
-history, business-account outgoing-transaction approval, automated tests,
-traceability, and local deployment.
+The MVP scope MUST remain limited to registration, authentication, Personal
+Account access, Business Account access, Business Account membership,
+invitations, role management, deposits, withdrawals, transfers, outgoing
+Business approval workflow, transaction history, approval history, access audit
+history, automated tests, traceability, and local deployment.
 
 Rationale: A narrow local-first stack keeps the SDD MVP auditable, testable, and
-focused on proving banking rules before architecture expansion.
+focused on proving banking and access-governance rules before architecture
+expansion.
 
 ### II. Financial Correctness and Money Validation
 All balances and monetary operations MUST use precise decimal arithmetic. The
 application MUST never use floating-point arithmetic for money.
 
 Deposits, withdrawals, opening deposits, and transfers MUST reject zero,
-negative, malformed, non-numeric, or invalid-precision values. Any operation
-that would result in a negative account balance MUST be prevented. Rejected or
-failed financial operations MUST NOT modify balances and MUST NOT be recorded as
-completed transactions.
+negative, malformed, non-numeric, non-SGD, or invalid-precision values. Monetary
+values MUST support no more than two decimal places. Any operation that would
+result in a negative account balance MUST be prevented. Rejected or failed
+financial operations MUST NOT modify balances and MUST NOT be recorded as
+completed financial transactions.
 
 Rationale: Banking correctness depends on exact SGD arithmetic, strict amount
 validation, and unchanged state after failed operations.
 
-### III. Account Types and Recipient Identity
-The MVP MUST support exactly two account types: Personal Account and Business
-Account. A user MAY have one Personal Account and one Business Account.
+### III. Separate Login Identities and Account Experiences
+During registration, a new user MUST choose exactly one account-access type:
+Personal Account access or Business Account access. A Personal login identity
+MUST access Personal Account functionality only. A Business login identity MUST
+access Business Account functionality only. The same login identity MUST NOT
+access both Personal and Business Accounts.
 
-A registered user MUST have a unique email address, password, and user-selected
-username. Passwords MUST be stored using Django authentication and password
-hashing facilities and MUST never be stored in plaintext.
+A real individual who requires both Personal and Business access MUST use
+separate registered credentials for each context. Email addresses MUST remain
+unique login identifiers across the whole application, so separate Personal and
+Business login identities MUST use different email addresses.
 
-A Personal Account MUST have an owner, balance, and one unique registered phone
-number used as its transfer recipient identifier. A Business Account MUST have
-an owner, balance, one unique company UEN used as its transfer recipient
-identifier, exactly one authorised Personal Account, and a business display name
-to be defined more fully in the feature specification. A company UEN MUST be
-unique across all Business Accounts.
+Registered users MUST have a unique email address, securely stored password, and
+user-selected username. Passwords MUST be stored using Django authentication and
+password hashing facilities and MUST never be stored in plaintext.
 
-Rationale: Personal recipients and business recipients need distinct identifiers
-so incoming transfers are unambiguous when a user owns both account types.
+Rationale: Personal banking and company banking are separate experiences with
+different ownership and permission rules. Separate login identities prevent an
+individual Personal Account from implicitly owning or authorising company funds.
 
-### IV. Personal Account Rules
-A Personal Account MUST NOT require an opening deposit and MAY begin with a
-balance of SGD 0.00. A Personal Account has no minimum-balance requirement.
+### IV. Personal Account Model
+A Personal user registers for and accesses exactly one Personal Account. A
+Personal Account MUST require a user-selected username, unique email login,
+securely stored password, and one unique phone number used for receiving
+transfers.
 
-A Personal Account MAY withdraw or transfer funds only when the amount is valid,
-greater than zero, and the operation does not cause the balance to become
-negative. Successful Personal Account deposits, withdrawals, and outgoing or
-incoming transfers MUST be auditable through transaction records.
+A Personal Account MUST NOT require an opening deposit and MUST begin with
+balance SGD 0.00 unless funds are later deposited or received. A Personal
+Account has no minimum-balance requirement.
 
-Rationale: Personal accounts are ordinary user accounts with no minimum-balance
-constraint, but they still require exact validation and auditability.
+A Personal Account MAY deposit, withdraw, and make outgoing transfers only when
+the amount is valid and greater than zero. A Personal Account withdrawal or
+outgoing transfer MAY leave the account at SGD 0.00, but MUST NOT cause the
+balance to become negative. A Personal Account receives incoming transfers using
+its unique phone number.
 
-### V. Business Account Opening and Balance Rules
-A user MUST already have a Personal Account before opening a Business Account.
-A new Business Account MUST require an opening deposit of at least SGD 7,000.00
-before it can be created. A Business Account cannot be created unless a unique
-company UEN is supplied. The UEN MUST be recorded as the Business Account's
-incoming-transfer identifier and MUST NOT be duplicated across Business
-Accounts.
+Successful Personal Account deposits, withdrawals, and outgoing or incoming
+transfers MUST be auditable through immutable completed financial transaction
+records.
 
-The user's own Personal Account is the single authorised Personal Account for
-their Business Account in the MVP. A Business Account MUST maintain a minimum
-balance of SGD 7,000.00 after every completed outgoing transaction. A withdrawal
-or outgoing transfer from a Business Account MUST be rejected when it would cause
-the balance to fall below SGD 7,000.00. Deposits into a Business Account and
-incoming transfers received by a Business Account do not require approval and
-MAY increase its balance.
+Rationale: Personal accounts are individual SGD accounts with no retained
+minimum, but they still require exact validation, unique recipient identity, and
+auditable financial movement.
 
-Rationale: Business accounts have explicit company identity, opening, approval,
-and ongoing balance obligations that differ from personal accounts.
+### V. Business Account and Business User Model
+A Business Account is a separate company-owned shared account. A Business
+Account MUST NOT be owned or authorised by a Personal Account.
 
-### VI. Deposits and Withdrawals
-A valid positive deposit MAY be credited to either a Personal Account or a
-Business Account. Every successful deposit MUST create an immutable deposit
-transaction record with a UUID transaction ID.
+A Business Account MUST require a business display name, one unique company UEN
+used for receiving transfers, an opening deposit of at least SGD 7,000.00, and
+at least one active Business User with the AUTHORISER role. The opening deposit
+MUST create one immutable completed financial transaction record with a UUID
+transaction ID.
+
+The individual who creates a new Business Account MUST create or use a
+Business-only login identity and MUST automatically become the first AUTHORISER
+for that Business Account. A Business User MAY be granted access to one or more
+Business Accounts. A Business User MUST NOT gain access to Personal Account
+functionality through the same login identity.
+
+A Business Account MUST be accessed through individual Business User logins, not
+shared company credentials. Sharing a single email/password login among multiple
+individuals is not an approved application behaviour.
+
+A Business Account MUST maintain a minimum balance of SGD 7,000.00 after every
+completed outgoing withdrawal or outgoing transfer. Deposits into a Business
+Account and incoming transfers received by a Business Account do not require
+approval and MAY increase its balance.
+
+Rationale: Business banking represents company funds governed by individual
+Business Users and role-based membership, not by a Personal Account owner.
+
+### VI. Business Account Membership and Invitations
+The MVP MUST define exactly two Business Account membership roles: MEMBER and
+AUTHORISER.
+
+A MEMBER MAY view the Business Account balance, view completed Business Account
+transaction history, view Business Account approval/request history, deposit
+funds into the Business Account without approval, submit outgoing withdrawal
+requests, submit outgoing transfer requests, and cancel their own PENDING
+outgoing requests.
+
+A MEMBER MUST NOT approve or reject outgoing requests, invite users, assign
+membership roles, promote users, remove users, or cancel another user's PENDING
+request.
+
+An AUTHORISER has all MEMBER capabilities. An AUTHORISER MAY also approve any
+PENDING outgoing Business Account withdrawal or transfer request, reject any
+PENDING outgoing Business Account withdrawal or transfer request, cancel any
+PENDING outgoing Business Account withdrawal or transfer request including their
+own, invite Business Users to the Business Account, assign MEMBER or AUTHORISER
+role when inviting a user, promote an existing MEMBER to AUTHORISER, remove an
+existing MEMBER, and remove another AUTHORISER only when at least one
+AUTHORISER remains afterward.
+
+An AUTHORISER MUST NOT demote an AUTHORISER back to MEMBER in the MVP. An
+AUTHORISER MUST NOT remove themselves or another AUTHORISER when doing so would
+leave the Business Account without any AUTHORISER. The application MUST NOT
+allow a Business Account to have zero AUTHORISER memberships.
+
+Only an AUTHORISER MAY invite another user to access a Business Account.
+Invitations MUST be addressed using the invitee's email address and MUST specify
+the role to be granted upon acceptance: MEMBER or AUTHORISER. Access MUST be
+granted only after the invited Business User accepts the invitation.
+
+An invited person MUST register a Business-only login identity or sign in using
+an existing Business-only login identity. A Personal-only login identity MUST
+NOT accept or use Business Account access. A Business User MAY accept membership
+in more than one Business Account.
+
+Removed users MUST immediately lose access to the affected Business Account.
+Removal from one Business Account MUST NOT remove access to other Business
+Accounts where the user remains a member. Promoting a MEMBER to AUTHORISER is
+supported. Demoting an AUTHORISER to MEMBER is outside MVP scope. Removing an
+AUTHORISER is supported only when another AUTHORISER remains.
+
+Rationale: Company account access requires individual accountability, explicit
+membership, and a role model that protects Business Accounts from losing all
+authorisers.
+
+### VII. Business Account Access Audit History
+The application MUST record Business Account access audit events for Business
+Account creation and initial AUTHORISER assignment, invitation issuance,
+invitation acceptance, role assigned through accepted invitation, MEMBER
+promotion to AUTHORISER, MEMBER removal, AUTHORISER removal, and rejected or
+invalid membership-management attempts where retained for audit purposes.
+
+Each access audit event MUST record at minimum the affected Business Account,
+acting Business User where applicable, affected or invited Business User or
+email where applicable, action type, assigned or removed role where applicable,
+date/time, and outcome or status.
+
+Access audit history MUST be distinguishable from completed financial
+Transaction History and outgoing-request Approval History.
+
+Rationale: Business access governance is itself an auditable activity and must
+not be confused with financial movement.
+
+### VIII. Deposits, Withdrawals, and Business Approval
+A valid positive deposit MAY be credited to a Personal Account or Business
+Account. Any MEMBER or AUTHORISER with active access to a Business Account MAY
+make a valid deposit into that Business Account without approval. Every
+successful deposit MUST create an immutable deposit transaction record with a
+UUID transaction ID.
 
 A Personal Account withdrawal MAY complete without approval when the amount is
 valid and the account has sufficient balance to avoid a negative balance. A
-Business Account withdrawal is an outgoing business transaction and MUST NOT
-complete until it is approved by its authorised Personal Account. Every
+Business Account withdrawal is an outgoing Business request and MUST NOT
+complete until approved by an AUTHORISER for that Business Account. Every
 successfully completed withdrawal MUST create an immutable withdrawal
 transaction record with a UUID transaction ID.
 
-Rationale: Deposits are immediate positive credits, while withdrawals require
-account-type-specific balance and authorization enforcement.
+Any MEMBER or AUTHORISER with active access to a Business Account MAY submit an
+outgoing Business withdrawal or transfer request. Submission MUST create a
+PENDING request only. A PENDING request MUST NOT move money, reserve funds,
+reduce displayed balance, or create completed financial transaction records.
 
-### VII. Transfers and Linked Transaction Records
-Transfers to a Personal Account MUST use the recipient Personal Account's unique
-registered phone number. Transfers to a Business Account MUST use the recipient
-Business Account's unique company UEN. A Business Account MUST NOT use a phone
-number as its incoming transfer identifier.
+Any one AUTHORISER approval is sufficient to approve and complete a valid
+outgoing Business request. An AUTHORISER MAY approve a request they submitted
+themselves. An AUTHORISER MAY reject any PENDING request. A MEMBER MAY cancel
+only their own PENDING request. An AUTHORISER MAY cancel any PENDING request,
+including their own.
 
-The transfer flow MUST require the sender to identify the recipient account
-type. For a Personal Account recipient, the sender MUST enter a phone number.
-For a Business Account recipient, the sender MUST enter a UEN. Before
-confirmation, the system MUST display safe recipient confirmation details such
-as username or business display name and account type without exposing sensitive
-information.
+The only persisted outgoing-request statuses are PENDING, COMPLETED, REJECTED,
+CANCELLED, and FAILED. There is no separately persisted APPROVED status.
+Approval is an action applied to a PENDING request.
 
-Transfers MUST reject zero, negative, malformed, or invalid-precision amounts;
-unknown or mismatched recipient identifiers; amounts that would cause a Personal
-Account sender to become negative; amounts that would cause a Business Account
-sender to fall below SGD 7,000.00; and outgoing Business Account transfers that
-have not received required approval. Self-transfers remain excluded from the
-MVP. Transfers between a user's own Personal Account and Business Account remain
-excluded from the MVP unless explicitly added by a future amendment.
+When approval succeeds and all financial validations pass, the request changes
+directly from PENDING to COMPLETED and money movement completes atomically. If
+approval is attempted but current rules fail, including the SGD 7,000.00
+retained-minimum rule, the request changes from PENDING to FAILED and no money
+moves. Only PENDING requests MAY be approved, rejected, or cancelled.
+COMPLETED, REJECTED, CANCELLED, and FAILED requests are final.
+
+Multiple PENDING outgoing requests MAY exist simultaneously. Each PENDING
+request MUST be independently revalidated at approval time.
+
+Rationale: Business outgoing funds require role-based approval, current-state
+financial revalidation, no fund reservation while pending, and a clear lifecycle
+without an APPROVED stored state.
+
+### IX. Transfers and Linked Transaction Records
+Personal Accounts receive transfers using unique phone numbers. Business
+Accounts receive transfers using unique UEN values. A sender MUST select whether
+the destination is a Personal Account or Business Account. The entered
+identifier MUST match the destination account type: phone number for Personal
+Account destination and UEN for Business Account destination.
+
+Unknown identifiers and identifier/account-type mismatches MUST be rejected.
+Transfers from a Personal Account are performed by the Personal login identity
+owning that account. Transfers from a Business Account are requested by a MEMBER
+or AUTHORISER with active access to that Business Account and require AUTHORISER
+approval before completion.
+
+A transfer from an account back to the same account MUST be rejected. Prior
+rules concerning transfers between a user's own Personal Account and Business
+Account are removed because Personal and Business login identities are no longer
+linked under one user ownership model.
 
 Every successfully completed transfer MUST create one unique transfer operation
-ID, one immutable sender debit transaction record, and one immutable recipient
-credit transaction record. The sender debit record and recipient credit record
-MUST each have their own UUID transaction ID and MUST reference the same
-transfer operation ID.
+ID, one immutable sender debit financial transaction record, and one immutable
+recipient credit financial transaction record. The sender debit record and
+recipient credit record MUST each have their own UUID transaction ID and MUST
+reference the same transfer operation ID.
 
-Sender debiting, recipient crediting, and transaction-record creation MUST be
-atomic: either all changes succeed or none occur.
+Sender debiting, recipient crediting, transfer operation creation, and
+transaction-record creation MUST be atomic: either all changes succeed or none
+occur.
 
-Rationale: Personal and business recipients require different identifiers, while
-completed transfer records must remain linked, auditable, and atomic.
+Rationale: Recipient identity differs by account type, while completed transfer
+records must remain linked, auditable, and atomic.
 
-### VIII. Business Account Authorisation
-Each Business Account MUST be associated with exactly one authorised Personal
-Account. A Business Account MUST NOT complete an outgoing transaction unless its
-authorised Personal Account approves it.
+### X. Transaction, Approval, and Access History Separation
+The application MUST provide three logically distinct audit views.
 
-Approval is required for withdrawals from a Business Account and transfers sent
-from a Business Account. Approval is not required for deposits into a Business
-Account or incoming transfers received by a Business Account.
+Transaction History MUST display completed financial movements only, including
+deposits, completed withdrawals, completed transfer debits, completed transfer
+credits, and Business Account opening deposits.
 
-The approval workflow statuses are:
-- PENDING: an outgoing Business Account withdrawal or transfer request has been
-  submitted but not resolved.
-- COMPLETED: the authorised Personal Account approved the request, all financial
-  validations passed, and the money movement completed.
-- REJECTED: the authorised Personal Account declined the request and no money
-  moved.
-- CANCELLED: the Business Account owner cancelled a PENDING request and no money
-  moved.
-- FAILED: the authorised Personal Account attempted approval, but completion
-  failed because current validation rules were not satisfied and no money moved.
+Approval History MUST display Business Account outgoing withdrawal and transfer
+requests and their workflow statuses: PENDING, COMPLETED, REJECTED, CANCELLED,
+and FAILED.
 
-There is no separately stored APPROVED status in the MVP. Approval is an action
-taken on a PENDING request. If approval succeeds and funds move, the request
-becomes COMPLETED. If approval is attempted but completion validation fails, the
-request becomes FAILED. Only PENDING requests may be approved, rejected, or
-cancelled. COMPLETED, REJECTED, CANCELLED, and FAILED are final statuses.
+Access Audit History MUST display Business Account access-management activity,
+including invitations, invitation acceptances, assigned roles, promotions,
+removals, and initial AUTHORISER creation.
 
-A Business Account MAY have multiple PENDING outgoing transaction requests at
-the same time. PENDING requests MUST NOT reserve funds and MUST NOT alter
-displayed account balances. Each PENDING request MUST be independently
-revalidated at the time approval is attempted. Completing one request MAY cause
-a later PENDING request to fail approval if the Business Account would no longer
-retain SGD 7,000.00 after completion.
+Non-completed workflow records and access records MUST NOT be represented as
+completed financial movements.
 
-Rationale: Business outgoing funds require explicit personal-account governance,
-current-state revalidation, and an audit-friendly lifecycle without a separate
-persisted APPROVED status.
+Rationale: Financial audit, outgoing-request workflow, and access governance
+answer different accountability questions and must remain separate.
 
-### IX. Transaction Auditability and Immutability
+### XI. Transaction Auditability and Immutability
 Every successful deposit and completed withdrawal MUST have an immutable
-transaction record with a UUID transaction ID. Every successfully completed
-transfer MUST produce two immutable linked transaction records joined by one
-transfer operation ID. Completed transaction records MUST NOT be editable through
-application logic.
+financial transaction record with a UUID transaction ID. Every successfully
+completed transfer MUST produce two immutable linked financial transaction
+records joined by one transfer operation ID. Completed financial transaction
+records MUST NOT be editable through application logic.
 
-Completed transaction records MUST include at minimum a UUID transaction ID,
-transaction type, amount in SGD, associated account, completion timestamp,
-transaction status, and transfer operation ID where applicable.
+Completed financial transaction records MUST include at minimum a UUID
+transaction ID, transaction type, amount in SGD, associated account, completion
+timestamp, transaction status, and transfer operation ID where applicable.
 
-PENDING, REJECTED, CANCELLED, or FAILED Business Account approval requests MAY
-be retained for workflow auditability, but they MUST be clearly distinguished
-from completed balance-changing transactions.
+Rejected, CANCELLED, FAILED, or still-PENDING outgoing requests MUST NOT move
+funds or create completed financial transaction records.
 
 Rationale: Completed financial history must be complete, immutable, and clearly
-separated from pending or failed workflow records.
+separated from pending or failed workflow and access records.
 
-### X. Security and Secrets Management
+### XII. Automated Testing and Quality Gates
+Automated tests are mandatory for core banking, access, and audit behaviour. A
+feature with failing mandatory tests MUST NOT be treated as complete.
+
+Mandatory tests MUST cover Personal registration creating Personal-only access;
+Business registration creating Business-only access; Personal login denial from
+Business Account pages and Business invitations; Business login denial from
+Personal Account pages; separate registered credentials for individuals needing
+both contexts; Personal Account creation at SGD 0.00 with unique phone number;
+Personal deposits, withdrawals, full-balance withdrawal, outgoing transfers, and
+negative-balance rejection; Business Account creation with unique UEN, opening
+deposit of at least SGD 7,000.00, and initial AUTHORISER; duplicate UEN
+rejection; Business User membership in multiple Business Accounts; AUTHORISER
+invitation of MEMBER and AUTHORISER users; invitation acceptance before access
+is granted; Personal-only identity rejection from Business invitation
+acceptance; MEMBER inability to invite or assign roles; AUTHORISER promotion of
+MEMBER to AUTHORISER; AUTHORISER removal of MEMBER; AUTHORISER removal of
+another AUTHORISER only when another AUTHORISER remains; final AUTHORISER
+removal rejection; removed user immediate access loss; demotion from AUTHORISER
+to MEMBER being unsupported; MEMBER and AUTHORISER deposits without approval;
+MEMBER and AUTHORISER outgoing request submission; MEMBER inability to approve
+or reject; AUTHORISER approval of any PENDING request; one AUTHORISER approval
+being sufficient; AUTHORISER self-approval; MEMBER cancellation of own PENDING
+request only; AUTHORISER cancellation of any PENDING request; multiple PENDING
+requests and approval-time revalidation; Business retained-minimum failure
+changing request to FAILED without money movement; Personal phone recipient
+lookup; Business UEN recipient lookup; unknown recipient rejection; identifier
+type mismatch rejection; UUID transaction IDs; shared transfer operation IDs;
+atomic rollback on failed financial operations; Transaction History containing
+completed financial events only; Approval History containing outgoing Business
+requests; and Access Audit History containing invitations, acceptances,
+promotions, removals, and initial AUTHORISER creation.
+
+Rationale: The MVP cannot claim banking or access-governance correctness unless
+identity separation, membership permissions, money movement, approval workflow,
+audit separation, and rollback behaviours are tested.
+
+### XIII. Security and Secrets Management
 Secrets and sensitive configuration MUST NOT be committed to GitHub. Django
 secret keys, plaintext passwords, tokens, private credentials, environment files
 containing secrets, and local SQLite database files MUST NOT be committed.
@@ -218,51 +365,25 @@ Secret configuration MUST be stored in environment variables or ignored local
 files. An appropriate `.gitignore` MUST exist before creating local secrets,
 SQLite database files, or Python virtual environments.
 
-Authentication, financial validation, balance rules, account ownership, and
-Business Account approvals MUST be enforced server-side rather than relying only
-on the user interface.
+Authentication MUST use securely hashed passwords. Personal and Business login
+identities MUST remain separate. Business Accounts MUST use individual user
+logins and MUST NOT rely on shared credentials.
 
-Rationale: Local MVP deployment still requires credential hygiene and server-side
-control of all security and banking invariants.
+Business membership, invitation, role assignment, promotion, removal, approval,
+rejection, cancellation, financial validation, account access, and permission
+checks MUST be enforced server-side rather than relying only on the user
+interface. Removed Business Users MUST lose access immediately. The last
+remaining AUTHORISER MUST NOT be removed.
 
-### XI. Automated Testing and Quality Gates
-Automated tests are mandatory for core banking behaviour. A feature with failing
-mandatory tests MUST NOT be treated as complete.
+Rationale: Local MVP deployment still requires credential hygiene, identity
+separation, role-based access protection, and server-side enforcement of all
+security and banking invariants.
 
-Mandatory tests MUST cover successful Personal Account creation without an
-opening deposit; Personal Account beginning at SGD 0.00; successful Business
-Account creation with an opening deposit of SGD 7,000.00 or more, unique UEN,
-and own authorised Personal Account; rejection of Business Account opening
-deposits below SGD 7,000.00; duplicate email rejection; duplicate phone-number
-rejection for Personal Accounts; duplicate UEN rejection for Business Accounts;
-secure password hashing expectations; successful positive deposits for both
-account types; rejection of zero and negative deposits; successful Personal
-Account withdrawal where sufficient balance exists; rejection of Personal
-Account withdrawal that would cause a negative balance; Personal Account
-transfer lookup by unique phone number; Business Account transfer lookup by
-unique UEN; rejection of a transfer where the selected recipient account type
-and identifier do not match; safe recipient confirmation behavior; successful
-Personal Account outgoing transfer where sufficient balance exists; rejection of
-Personal Account transfer that would cause a negative balance; successful
-permitted Business Account withdrawal after approval; rejection or non-completion
-of unapproved Business Account withdrawals; rejection of Business Account
-withdrawals that breach the SGD 7,000.00 minimum; rejection of unknown recipient
-identifiers; rejection of zero and negative transfers; rejection or
-non-completion of unapproved outgoing Business Account transfers; rejection of
-outgoing Business Account transfers that breach the SGD 7,000.00 minimum;
-incoming Business Account deposits and transfers proceeding without approval;
-multiple PENDING Business requests; no fund reservation while requests are
-PENDING; a PENDING request becoming FAILED when another completed request causes
-the retained-minimum rule to fail at approval time; absence of a separate
-APPROVED persisted status; generation of UUID transaction IDs; generation of one
-transfer operation ID shared by linked sender debit and recipient credit
-records; and atomic rollback when a financial operation fails.
+### XIV. Governance and SDD Compliance
+This constitution is the highest-authority project document for non-negotiable
+banking, identity, access-governance, and engineering rules. Every later
+specification and technical plan MUST include a Constitution Check.
 
-Rationale: The MVP cannot claim banking correctness unless the required account,
-recipient identity, money, authorization, transaction, and rollback behaviours
-are tested.
-
-### XII. Requirements Traceability
 Every business rule MUST remain traceable from constitution to specification,
 acceptance criteria, technical plan, implementation task, code component, and
 automated test.
@@ -273,23 +394,14 @@ requirements, `BR-###` for business rules, `SEC-###` for security requirements,
 Test names or associated traceability documentation MUST reference the banking
 rule or requirement being verified.
 
-A feature MUST NOT be considered complete unless its applicable business rules
-have implemented and passing tests.
-
-Rationale: SDD requires every rule to stay visible from intent through verified
-implementation.
-
-### XIII. Governance and SDD Compliance
-This constitution is the highest-authority project document for non-negotiable
-banking and engineering rules. Every later specification and technical plan MUST
-include a Constitution Check.
-
 A constitutional amendment is required for any change to the MVP technology
-stack, SGD-only currency restriction, account types, Personal Account
-no-minimum-balance rule, Business Account opening-deposit or minimum-balance
-rule, transfer recipient identifiers, transfer recording, Business Account
-authorisation lifecycle, security obligations, testing obligations, traceability
-obligations, or MVP scope.
+stack, SGD-only currency restriction, separate Personal and Business login
+identity model, account types, Personal Account no-minimum-balance rule,
+Business Account opening-deposit or minimum-balance rule, Business membership
+roles, invitation rules, authorisation lifecycle, transfer recipient
+identifiers, transfer recording, transaction/approval/access history separation,
+security obligations, testing obligations, traceability obligations, or MVP
+scope.
 
 Semantic versioning MUST be applied as follows: MAJOR for removing or
 fundamentally redefining a core principle or banking invariant; MINOR for adding
@@ -297,24 +409,31 @@ a mandatory principle or materially expanding scope; PATCH for clarifications
 that do not change required behaviour.
 
 Rationale: SDD artifacts must remain subordinate to the constitution, and
-changes to banking invariants must be intentional, reviewed, and versioned.
+changes to banking or access-governance invariants must be intentional,
+reviewed, and versioned.
 
-## Amendment 1.1.0 Recipient and Approval Governance
+## Amendment 2.0.0 Separate Identity and Business Membership Governance
 
-This amendment replaces phone-only transfer recipient identification with
-account-type-specific recipient identification. Personal Account incoming
-transfers use unique phone numbers. Business Account incoming transfers use
-unique company UENs. Sender transfer flows MUST require the recipient account
-type before collecting the matching identifier.
+This amendment replaces the former model where one login could own both a
+Personal Account and a Business Account, and where the user's Personal Account
+authorised Business Account outgoing transactions.
 
-This amendment resolves approval lifecycle governance by removing any separate
-persisted APPROVED status from the MVP. Approval is an action on a PENDING
-request. A successful approval produces COMPLETED; an attempted approval that
-fails current validation produces FAILED.
+The application now requires separate Personal and Business login identities.
+A Personal login identity accesses Personal Account functionality only. A
+Business login identity accesses Business Account functionality only. Business
+Accounts are company-owned shared accounts accessed by individual Business Users
+through membership and role-based permissions.
 
-This amendment also permits multiple PENDING Business Account outgoing requests
-at the same time, with no fund reservation and independent approval-time
-revalidation for each request.
+This amendment introduces MEMBER and AUTHORISER Business membership roles,
+Business Account invitations, promotion and removal governance, access audit
+history, and mandatory tests for identity separation, membership permissions,
+Business approval, and audit separation.
+
+All later artifacts MUST remove or replace statements implying one login owns
+both Personal and Business Accounts, a Personal Account authorises a Business
+Account, a Business Account must be linked to an owner's Personal Account,
+Business access is provided through shared credentials, or exactly one Business
+authoriser exists.
 
 ## Specification-Driven Development Quality Gates
 
@@ -324,14 +443,17 @@ identifiers. Each business rule MUST have acceptance criteria before planning
 begins.
 
 Every technical plan MUST prove alignment with the MVP stack, SGD-only money
-handling, account-type rules, personal and business recipient identifiers,
-personal and business balance rules, deposit and withdrawal rules, transfer
-atomicity, business authorization lifecycle, transaction immutability, secrets
-management, mandatory tests, traceability, and local deployment.
+handling, separate login identity model, Personal Account rules, Business
+Account membership and role rules, invitation rules, access audit rules,
+Business retained-minimum rules, deposit and withdrawal rules, transfer
+atomicity, Business outgoing approval lifecycle, transaction immutability,
+history separation, secrets management, mandatory tests, traceability, and
+local deployment.
 
 Every task list MUST include tests before implementation tasks for applicable
-banking rules. Tasks MUST preserve requirement and business-rule identifiers and
-name the code component and test path that will satisfy each rule.
+banking, membership, permission, audit, and security rules. Tasks MUST preserve
+requirement and business-rule identifiers and name the code component and test
+path that will satisfy each rule.
 
 Completion requires passing mandatory automated tests and updated traceability
 from constitution rule to specification, acceptance criteria, plan, task, code
@@ -346,16 +468,19 @@ the constitution wins until amended.
 Amendments MUST be proposed as explicit documentation changes that state the
 motivation, affected rules, migration impact, version impact, and required
 template updates. An amendment is approved only after the constitution and
-dependent Spec Kit templates are updated together.
+dependent Spec Kit templates are updated together, unless the amendment request
+explicitly limits the command to constitution-only output and records template
+updates as pending follow-up work.
 
 Compliance review is mandatory during specification and planning. A feature may
-not proceed from specification to planning, from planning to tasks, or from tasks
-to complete implementation while any applicable constitutional gate is failing.
+not proceed from specification to planning, from planning to tasks, or from
+tasks to complete implementation while any applicable constitutional gate is
+failing.
 
 Versioning follows semantic versioning:
-- MAJOR: removing or fundamentally redefining a core principle or banking
-  invariant.
+- MAJOR: removing or fundamentally redefining a core principle or banking,
+  identity, membership, authorisation, or audit invariant.
 - MINOR: adding a mandatory principle or materially expanding scope.
 - PATCH: clarifications that do not change required behaviour.
 
-**Version**: 1.1.0 | **Ratified**: 2026-05-25 | **Last Amended**: 2026-05-25
+**Version**: 2.0.0 | **Ratified**: 2026-05-25 | **Last Amended**: 2026-05-26
