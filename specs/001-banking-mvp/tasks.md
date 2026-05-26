@@ -1,451 +1,498 @@
-# Tasks: Banking MVP Constitution v2.0.0
+# Tasks: Banking MVP v3.0.0
 
 **Input**: Design documents from `specs/001-banking-mvp/`
 
-**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/server-rendered-flows.md`, `quickstart.md`, `traceability.md`, `checklists/requirements-quality-v2.md`
+**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/server-rendered-flows.md`, `quickstart.md`, `traceability.md`, `refactoring-impact.md`, `checklists/requirements-quality-v3.md`
 
-**Tests**: Automated tests are mandatory for banking, membership, permission, audit, and financial rules. Write the relevant tests before or alongside implementation and verify they fail for missing behavior before making them pass.
+**Tests**: Automated tests are mandatory for banking, authentication, employee-access security, approval permissions, auditability, and financial integrity.
 
-**Organization**: Tasks follow the required v2.0.0 implementation phases. User-story labels map to `spec.md` user stories: `[US1]` registration/context, `[US2]` Personal Account, `[US3]` Business registration, `[US4]` membership/invitations, `[US5]` transfers, `[US6]` Business requests/approvals, `[US7]` Midnight Ledger UI, `[US8]` histories.
+**Organization**: Tasks are dependency ordered by the required v3 phases. User story labels map to the specification user stories:
 
-## Phase 1: Superseded Implementation Assessment and Safe Refactoring Preparation
+- `US1`: Register for the correct account product
+- `US2`: Use a Personal Account
+- `US3`: Create a Business Account as initial AUTHORISER
+- `US4`: Provision and govern employee access
+- `US5`: Transfer money safely
+- `US6`: Submit and resolve Business outgoing requests
+- `US7`: Navigate the Midnight Ledger interface
+- `US8`: View Transaction, Approval, and Access Audit histories
 
-**Purpose**: Identify and isolate implementation work based on the superseded one-login / authorised-Personal-Account model before v2.0.0 implementation resumes.
+## Phase 1: Superseded Implementation Review and Safe Reset/Refactor Preparation
 
-- [X] T001 Create superseded-model assessment notes in `specs/001-banking-mvp/refactoring-impact.md` covering old user/account ownership, authorised Personal Account relationships, exactly-one-authoriser assumptions, same-user Personal/Business transfer restrictions, old tests, old migrations, and local SQLite state; verify notes reference `BR-007`, `BR-014`, `BR-018`, `BR-036`, and `SC-024`.
-- [X] T002 Inspect `users/`, `banking/`, `templates/`, `static/`, and `specs/001-banking-mvp/tasks.md` history for code or tasks that assume one login owns both Personal and Business contexts; record affected paths in `specs/001-banking-mvp/refactoring-impact.md` and verify no preservation of obsolete behavior is required. [BR-007 to BR-009, SC-024]
-- [X] T003 Inspect `banking/models.py`, `banking/forms.py`, `banking/services/`, `banking/views.py`, and migrations for authorised-Personal-Account fields or Personal-prerequisite Business creation logic; record removal/rewrite targets in `specs/001-banking-mvp/refactoring-impact.md`. [BR-014, FR-020 to FR-026]
-- [X] T004 Inspect transfer and approval code/tests for same-user Personal/Business rejection, exactly-one-authoriser, or Personal-account approval assumptions; record rewrite targets in `specs/001-banking-mvp/refactoring-impact.md`. [BR-018, BR-026, BR-036]
-- [X] T005 Assess local `db.sqlite3` and existing migration files for superseded schema compatibility; document the approved local reset approach in `specs/001-banking-mvp/refactoring-impact.md` and verify no valuable user data preservation assumption is introduced. [NFR-001, SC-024]
-- [X] T006 Remove or quarantine superseded local SQLite database and obsolete generated migration files only after T001-T005 confirm local MVP reset is acceptable; verify the working tree contains no required user data files and that future migrations can be regenerated for v2.0.0. [NFR-001, SC-024]
-- [X] T007 Run `rg "authorised Personal|authorized Personal|own Personal|exactly one author|same-user|same user|Personal Account author" users banking templates specs/001-banking-mvp` and update `specs/001-banking-mvp/refactoring-impact.md` with any remaining intentional or obsolete matches; verify v2.0.0 implementation baseline is ready. [BR-014, BR-018, BR-036]
+**Purpose**: Inventory v2/v1 implementation remnants and prepare the approved local reset/refactor path before building the v3 model.
 
-**Checkpoint**: Superseded implementation assumptions are identified, local reset decision is documented, and v2.0.0 implementation can begin.
+- [ ] T001 Inspect `banking/models.py`, `users/models.py`, `banking/migrations/`, and `users/migrations/` for invitation, multi-membership, authorised-Personal-Account, exactly-one-Authoriser, and persisted APPROVED assumptions; document findings in `specs/001-banking-mvp/refactoring-impact.md` for FR-066, BR-016, BR-036 verification by review.
+- [ ] T002 Inspect `banking/services/`, `banking/forms.py`, `banking/views.py`, and `banking/urls.py` for invitation acceptance, Business Account selector, multi-Business membership, and old transfer ownership logic; document replacement targets in `specs/001-banking-mvp/refactoring-impact.md` for FR-032-FR-034, FR-066 verification by review.
+- [ ] T003 Inspect `templates/`, `static/css/`, and `staticfiles/css/` for `Invitations`, `Invite Business User`, `Store Invitation`, invitation registration, Business Account selector, and sparse v2 UI assumptions; document UI replacement targets in `specs/001-banking-mvp/refactoring-impact.md` for UX-009-UX-029 verification by review.
+- [ ] T004 Inspect `users/tests/` and `banking/tests/` for invitation, multiple Business membership, Personal Account authorisation, exactly-one-Authoriser, and old selector tests; document which tests must be replaced in `specs/001-banking-mvp/refactoring-impact.md` for TEST-012, TEST-034, TEST-035 verification by review.
+- [ ] T005 Identify active obsolete checklist files in `specs/001-banking-mvp/checklists/` and record archival actions needed before implementation gates in `specs/001-banking-mvp/refactoring-impact.md` for CHK-VERSION-007 verification by checklist scan.
+- [ ] T006 Identify local SQLite database files and generated migration state affected by the v3 schema redesign; record the approved local reset or forward-migration strategy in `specs/001-banking-mvp/refactoring-impact.md` for NFR-001, NFR-005 verification by review.
+- [ ] T007 Verify the Phase 1 inventory by searching for `Invitation`, `Invite Business User`, `Store Invitation`, `Business Account selector`, `authorised_personal`, `APPROVED`, and multi-membership terms across `users/`, `banking/`, `templates/`, `static/`, and `specs/001-banking-mvp/`; record all active implementation hits in `specs/001-banking-mvp/refactoring-impact.md` for FR-066, BR-036 verification by search output.
 
-## Phase 2: Project Configuration, Dependencies, Secrets, and Test Bootstrap
+**Checkpoint**: Superseded v1/v2 implementation components are listed for replacement/removal before v3 model work starts.
 
-**Purpose**: Establish the approved Django/SQLite/templates/custom CSS/Waitress foundation.
+## Phase 2: Project Configuration, Repository Hygiene, and Test Bootstrap
 
-- [X] T008 Validate or create Django project package `bankapp/` with `settings.py`, `urls.py`, `wsgi.py`, and `waitress_server.py`; verify `python manage.py check` can discover the project. [NFR-001]
-- [X] T009 Validate or create Django apps `users/` and `banking/` with `apps.py`, `admin.py`, `models.py`, `forms.py`, `views.py`, `urls.py`, `tests/`, and template directories; verify both apps are importable. [NFR-001]
-- [X] T010 Configure `requirements.txt` with Django and Waitress only; verify no unapproved frontend framework, REST framework, external email, payment, queue, or cloud dependency is present. [NFR-001]
-- [X] T011 Configure environment-based secret key and local debug settings in `bankapp/settings.py` and `.env.example`; verify settings fail safely or use documented local defaults without committing secrets. [SEC-010]
-- [X] T012 Configure SQLite3, installed apps, custom user setting placeholder, templates, static files, login URLs, and CSRF defaults in `bankapp/settings.py`; verify configuration matches `plan.md` source layout. [SEC-001, NFR-001]
-- [X] T013 Update `.gitignore` for `.env`, local secret files, SQLite database files, virtual environments, Python caches, collected static output, and local generated assets; verify `git status --ignored` excludes these local files. [SEC-010]
-- [X] T014 Create shared template skeletons `templates/base_public.html`, `templates/base_personal.html`, `templates/base_business.html`, and `templates/includes/` with minimal blocks only; verify Django template discovery succeeds. [UX-001]
-- [X] T015 Create custom CSS entry point `static/css/midnight-ledger.css` with initial design-token placeholders only; verify no external CSS framework is imported. [UX-001, NFR-001]
-- [X] T016 Establish baseline tests in `users/tests/test_smoke.py` and `banking/tests/test_smoke.py` for project import and URL configuration; verify `python manage.py test users banking` runs. [TEST-055]
+**Purpose**: Establish the Django project baseline and repository hygiene needed before schema work.
 
-**Checkpoint**: Project configuration, dependency, template/static, secret, and baseline test infrastructure are ready.
+- [ ] T008 Validate the Django project package, `users` app, and `banking` app are registered correctly in `bankapp/settings.py` for plan architecture verification by `python3 manage.py check`.
+- [ ] T009 Configure or validate `AUTH_USER_MODEL` and authentication settings in `bankapp/settings.py` before fresh v3 migrations for FR-002, FR-006-FR-007 verification by settings review.
+- [ ] T010 Validate template and static directories in `bankapp/settings.py` for server-rendered templates and custom CSS per UX-001 verification by `python3 manage.py check`.
+- [ ] T011 Validate dependencies in `requirements.txt` contain only Django and Waitress unless explicitly justified by `plan.md` for NFR-001 verification by dependency review.
+- [ ] T012 Configure environment-based `DJANGO_SECRET_KEY` loading in `bankapp/settings.py` and document local fallback behavior for SEC-011 verification by settings review.
+- [ ] T013 Update `.gitignore` to exclude `.env`, local SQLite databases, virtual environments, Python caches, local secret files, and generated local assets for SEC-011 verification by `git status --ignored`.
+- [ ] T014 Establish baseline Django test command behavior with `python3 manage.py test` and record current expected failures caused by pending v3 refactor in implementation notes for TEST-001-TEST-069 verification by test output.
+- [ ] T015 Verify local app startup check with `python3 manage.py check` after configuration changes for NFR-001 verification by command output.
 
-## Phase 3: Exclusive Personal/Business User Identity and Authentication
+## Phase 3: Login Identity Model and Authentication Context Enforcement
 
-**Purpose**: Build the identity foundation required by all account and membership flows.
+**Purpose**: Implement immutable Personal versus Business Employee login identity and route protection.
 
-- [X] T017 [P] Add authentication model tests in `users/tests/test_authentication.py` for unique email, username, access context choices `PERSONAL`/`BUSINESS`, password hashing, and duplicate email rejection across contexts; verify tests fail before model implementation. [FR-001 to FR-005, TEST-003, TEST-011]
-- [X] T018 [P] Add access-context tests in `users/tests/test_access_context.py` for Personal denial from Business views/actions and Business denial from Personal views/actions using placeholder protected views; verify tests fail before guards exist. [FR-006 to FR-010, SEC-002, TEST-004 to TEST-006]
-- [X] T019 Implement custom user manager and custom user model in `users/managers.py` and `users/models.py` with unique email login, username, password hashing, and required `access_context`; verify T017 passes. [FR-001 to FR-005, BR-007 to BR-009]
-- [X] T020 Configure `AUTH_USER_MODEL`, authentication backend expectations, and admin registration in `bankapp/settings.py` and `users/admin.py`; verify fresh migrations can reference the custom user model before banking models. [FR-002]
-- [X] T021 Create initial user migration in `users/migrations/`; verify `python manage.py makemigrations users --check --dry-run` is clean after migration generation. [FR-002, TEST-003]
-- [X] T022 Implement sign-in, sign-out, and authentication views/forms in `users/forms.py`, `users/views.py`, `users/urls.py`, and `templates/users/`; verify valid and invalid sign-in tests pass. [FR-004 to FR-005, TEST-011]
-- [X] T023 Implement access-context decorators/helpers in `users/views.py` or `users/permissions.py`; verify Personal and Business cross-context denial tests in `users/tests/test_access_context.py` pass. [FR-006 to FR-010, SEC-002, TEST-004 to TEST-006]
+### Tests
 
-**Checkpoint**: Login identities are mutually exclusive and authenticated access context is enforceable.
+- [ ] T016 [P] [US1] Create identity model tests in `users/tests/test_authentication.py` for Personal identity, Business employee identity, duplicate email rejection, password hashing, valid sign-in, and invalid sign-in covering FR-002-FR-005 and TEST-003, TEST-011.
+- [ ] T017 [P] [US1] Create access context tests in `users/tests/test_access_context.py` for Personal denial from Business routes and Business Employee denial from Personal routes covering FR-006-FR-010, SEC-002-SEC-003, TEST-004-TEST-006.
 
-## Phase 4: Core Banking, Membership, Invitation, Approval, Transfer, and Audit Models
+### Implementation
 
-**Purpose**: Implement revised v2.0.0 domain models and migrations.
+- [ ] T018 [US1] Refactor `users/models.py` to define `CustomUser` fields for globally unique email, display name/username, and `login_context` values `PERSONAL` and `BUSINESS_EMPLOYEE` covering FR-001-FR-003 verification by model tests.
+- [ ] T019 [US1] Refactor `users/managers.py` to normalize email, require login context, and use Django password hashing for `CustomUser` creation covering FR-002, SEC-001 verification by authentication tests.
+- [ ] T020 [US1] Refactor `users/forms.py` login and identity forms so access context is set server-side by the selected route, never by a visible editable field, covering FR-006-FR-010 verification by form tests.
+- [ ] T021 [US1] Refactor `users/views.py` and `users/urls.py` for sign-in, sign-out, and context-specific post-login routing covering FR-004-FR-005 verification by client tests.
+- [ ] T022 [US1] Implement context guard helpers in `users/permissions.py` for Personal-only, Business-employee-only, authenticated-only, and safe denial behavior covering SEC-001-SEC-003 verification by access-context tests.
+- [ ] T023 [US1] Run `python3 manage.py test users.tests.test_authentication users.tests.test_access_context` and fix only identity/context defects for TEST-003-TEST-006, TEST-011 verification by passing tests.
 
-- [X] T024 [P] Add account model tests in `banking/tests/test_models_accounts.py` for Personal ownership restricted to `PERSONAL`, one Personal Account per Personal user, unique phone, unique UEN, and Business Account fields; verify tests fail first. [FR-011 to FR-024, TEST-007 to TEST-010]
-- [X] T025 [P] Add membership and invitation model tests in `banking/tests/test_models_memberships.py` for Business-only memberships, active membership uniqueness, multiple Business Accounts per Business user, roles, invitation statuses, and duplicate pending invitation constraints; verify tests fail first. [FR-027 to FR-048, TEST-037 to TEST-043]
-- [X] T026 [P] Add financial record model tests in `banking/tests/test_models_financial_records.py` for UUID transaction IDs, Transfer Operation IDs, exactly-one account references, transaction types, and distinct transaction/approval/access audit structures; verify tests fail first. [FR-069 to FR-077, TEST-022, TEST-050 to TEST-053]
-- [X] T027 [P] Add approval request model tests in `banking/tests/test_models_approvals.py` for request types, statuses `PENDING`/`COMPLETED`/`REJECTED`/`CANCELLED`/`FAILED`, absence of `APPROVED`, and terminal status choices; verify tests fail first. [FR-065 to FR-068, TEST-032 to TEST-033]
-- [X] T028 Implement `PersonalAccount`, `BusinessAccount`, `BusinessMembership`, `BusinessInvitation`, `BusinessAccessAuditEvent`, `CompletedFinancialTransaction`, `TransferOperation`, and `BusinessApprovalRequest` in `banking/models.py`; verify model tests start failing only on missing constraints/services, not missing classes. [FR-011 to FR-080]
-- [X] T029 Add model constants/choices for access roles, invitation statuses, approval statuses, transaction types, and audit event types in `banking/models.py`; verify `APPROVED` is not present in approval choices. [FR-065 to FR-066, TEST-032]
-- [X] T030 Add SQLite-practical model constraints in `banking/models.py` for unique phone, unique UEN, active membership uniqueness, non-negative balances, and exact account-reference rules where practical; verify T024-T027 pass where model-only behavior is sufficient. [BR-012, BR-015, BR-018, BR-039]
-- [X] T031 Create revised banking migrations in `banking/migrations/`; verify migrations apply cleanly to a fresh local SQLite database after the v2 reset. [NFR-004, SC-024]
+## Phase 4: Revised Banking, Employee Access, Request, Transaction, and Audit Models
 
-**Checkpoint**: v2.0.0 data structures exist and no model includes authorised-Personal-Account fields.
+**Purpose**: Replace v2 invitation/membership schema with the v3 data model.
 
-## Phase 5: Shared Financial Validation, Permission Helpers, and Service Foundations
+### Tests
 
-**Purpose**: Create reusable service-layer primitives before money, membership, and approval features.
+- [ ] T024 [US1] Create v3 structural model tests in `banking/tests/test_models.py` for PersonalAccount owner context, unique phone, BusinessAccount unique UEN, BusinessEmployeeAccess one-account scope, no employee balance/receiving identifier, role choices, access statuses, request statuses, no APPROVED, UUIDs, and distinct history entities covering FR-011-FR-097 and TEST-034, TEST-056.
 
-- [X] T032 [P] Add money validation tests in `banking/tests/test_money_validation.py` for valid amounts, zero, negative, malformed, non-numeric, excessive precision, over-capacity, SGD 7,000.00 accepted boundary, and SGD 6,999.99 failure boundary; verify tests fail first. [BR-001 to BR-004, TEST-014, TEST-035 to TEST-036]
-- [X] T033 [P] Add permission helper tests in `banking/tests/test_access_control.py` for Personal owner access, Business active membership, AUTHORISER-only access, final-AUTHORISER protection, removed membership denial, and cross-context denial; verify tests fail first. [SEC-001 to SEC-006, TEST-004, TEST-005, TEST-049, TEST-054]
-- [X] T034 Create service package `banking/services/` with `__init__.py`, `money.py`, `accounts.py`, `transfers.py`, `invitations.py`, `memberships.py`, and `approvals.py`; verify imports work. [NFR-004]
-- [X] T035 Implement Decimal parsing, validation, quantization, capacity checks, SGD formatting, and money constants in `banking/services/money.py`; verify `banking/tests/test_money_validation.py` passes. [BR-001 to BR-004, UX-019]
-- [X] T036 Implement domain exceptions or validation-result objects in `banking/services/__init__.py` or `banking/services/money.py`; verify services can return safe user-facing errors without leaking sensitive data. [NFR-003, SEC-008]
-- [X] T037 Implement Personal owner, active Business membership, AUTHORISER, requester cancellation, and last-AUTHORISER helper functions in `banking/services/memberships.py`; verify `banking/tests/test_access_control.py` passes for helper-level cases. [SEC-001 to SEC-006]
-- [X] T038 Add transaction-safe service wrapper conventions in service modules and document them in code comments only where needed; verify service functions intended to mutate multiple records use `transaction.atomic`. [NFR-004, BR-038]
+### Implementation
 
-**Checkpoint**: Shared validation, permission, and transaction foundations are ready.
+- [ ] T025 [US1] Apply the approved local reset/refactor strategy by removing or replacing superseded uncommitted development migration files in `banking/migrations/` and `users/migrations/` without touching the database state, covering NFR-001 verification by file review.
+- [ ] T026 [US1] Replace invitation and multi-membership model definitions in `banking/models.py` with `PersonalAccount`, `BusinessAccount`, `BusinessEmployeeAccess`, `CompletedFinancialTransaction`, `TransferOperation`, `BusinessOutgoingRequest`, and `AccessAuditEvent` per `data-model.md` covering FR-011-FR-097 verification by model tests.
+- [ ] T027 [US1] Add model choice constants in `banking/models.py` for employee roles, employee access statuses, transaction types, request types, request statuses, and access audit event types covering FR-035-FR-036, FR-083-FR-084, FR-094 verification by model tests.
+- [ ] T028 [US1] Add model validation in `banking/models.py` for exactly-one financial account references, Business employee user context, Personal owner context, positive completed transaction amounts, and no `APPROVED` status covering BR-001-BR-006, BR-036 verification by model tests.
+- [ ] T029 [US1] Generate fresh v3 migration files with `python3 manage.py makemigrations --dry-run --check` first, then planned migration creation only during implementation task execution, covering NFR-005 verification by migration dry-run and file review.
+- [ ] T030 [US1] Run `python3 manage.py test banking.tests.test_models` and fix only v3 model/schema defects for TEST-034, TEST-056 verification by passing tests.
 
-## Phase 6: Public Account-Type Selection and Authentication UI Foundation
+## Phase 5: Shared Money Validation, Permission Guards, and Domain Service Foundations
 
-**Purpose**: Provide public entry points and clear Personal/Business onboarding split.
+**Purpose**: Build reusable validations, permission gates, and service patterns before workflows.
 
-- [X] T039 [P] Add public UI tests in `users/tests/test_public_onboarding_views.py` for account-type selection content, Personal path explanation, Business path explanation, and absence of cross-context actions; verify tests fail first. [UX-002 to UX-004, TEST-055]
-- [X] T040 Implement account-type selection route in `users/urls.py` and `users/views.py`; verify route renders via `templates/users/account_type_selection.html`. [FR-001, UX-002]
-- [X] T041 Implement `templates/users/account_type_selection.html` with Personal and Business cards explaining phone receipt, UEN receipt, opening funds, and team approvals; verify T039 content assertions pass. [UX-002 to UX-004]
-- [X] T042 Implement public authentication layout styling in `templates/base_public.html` and `static/css/midnight-ledger.css`; verify page uses visible labels and clear primary actions. [UX-001, UX-015]
-- [X] T043 Complete sign-in template and sign-out link handling in `templates/users/login.html` and `users/views.py`; verify sign-in/out view tests pass. [FR-004 to FR-005]
+### Tests
 
-**Checkpoint**: Public onboarding clearly separates Personal and Business registration paths.
+- [ ] T031 [P] [US2] Create money validation tests in `banking/tests/test_money_validation.py` for valid Decimal, zero, negative, malformed, non-numeric, excessive precision, Personal `SGD 0.00`, Business `SGD 7,000.00`, and Business `SGD 6,999.99` boundaries covering BR-001-BR-006, TEST-038, TEST-059-TEST-060.
+- [ ] T032 [P] [US4] Create permission helper tests in `banking/tests/test_access_control.py` for Personal owner, Business active employee, AUTHORISER-only, password-change-required denial, deactivated denial, and final-AUTHORISER protection covering SEC-001-SEC-007, TEST-050, TEST-066-TEST-067.
+
+### Implementation
+
+- [ ] T033 [US2] Implement SGD Decimal parsing, validation, and `SGD 0.00` formatting in `banking/services/money.py` covering BR-001-BR-006 verification by money validation tests.
+- [ ] T034 [US4] Implement Business employee access lookup, active employee gate, AUTHORISER gate, password-change-required gate, deactivated gate, and final-active-AUTHORISER helper in `banking/services/access.py` covering FR-036-FR-066, SEC-004-SEC-007 verification by access-control tests.
+- [ ] T035 [US1] Implement shared domain exceptions or validation result types in `banking/services/exceptions.py` and wire usage in `banking/services/__init__.py` covering NFR-003 verification by service tests.
+- [ ] T036 [US1] Establish transaction-safe service patterns using `transaction.atomic()` in `banking/services/base.py` or service modules covering NFR-004 verification by later atomicity tests.
+- [ ] T037 [US2] Run `python3 manage.py test banking.tests.test_money_validation banking.tests.test_access_control` and fix only foundational validation/permission defects for TEST-038, TEST-050, TEST-066 verification by passing tests.
+
+## Phase 6: Public Midnight Ledger Foundation and Account Product Selection
+
+**Purpose**: Provide public onboarding UI with clear product separation and no invitation terminology.
+
+- [ ] T038 [P] [US7] Create public onboarding view tests in `users/tests/test_public_onboarding_views.py` for product separation, sign-in page access, no invitation terminology, and Midnight Ledger content covering UX-004-UX-006, TEST-068.
+- [ ] T039 [US7] Replace or improve public base layout in `templates/base_public.html` and shared includes in `templates/includes/` for Midnight Ledger typography, alerts, and form error structure covering UX-001-UX-003 verification by view tests and manual review.
+- [ ] T040 [US7] Implement product-selection route in `users/views.py`, `users/urls.py`, and `templates/users/account_type_selection.html` showing Personal phone/no-opening-deposit/individual-login and Business UEN/SGD7000/employee-access comparison covering UX-004-UX-006 verification by view tests.
+- [ ] T041 [US7] Implement initial design tokens and public components in `static/css/midnight-ledger.css` covering UX-001-UX-003 verification by manual UI review.
+- [ ] T042 [US7] Run `python3 manage.py test users.tests.test_public_onboarding_views` and manually verify no Invitation wording appears on public pages for TEST-068.
 
 ## Phase 7: Personal Registration and Personal Account Creation
 
-**Goal**: Personal registration creates Personal-only access and one Personal Account. [US1, US2]
+**Purpose**: Implement Personal registration as a complete independent increment.
 
-**Independent Test**: Registering a Personal user creates one `PERSONAL` identity, one Personal Account with unique phone and SGD 0.00 balance, no Business access, and no opening-deposit transaction.
+### Tests
 
-- [X] T044 [P] [US1] Add Personal registration service and view tests in `banking/tests/test_personal_registration.py` for successful registration, duplicate email, duplicate phone, password hashing, SGD 0.00 balance, no opening deposit transaction, and no Business membership; verify tests fail first. [FR-001 to FR-014, TEST-001, TEST-003, TEST-007 to TEST-008, TEST-011]
-- [X] T045 [US1] Implement Personal registration form in `users/forms.py` with username, email, password confirmation, and unique phone number; verify form tests for duplicates and required fields pass. [FR-011 to FR-014]
-- [X] T046 [US1] Implement Personal registration service in `banking/services/accounts.py` to atomically create `PERSONAL` user and Personal Account with SGD 0.00; verify T044 service assertions pass. [FR-011 to FR-014, BR-010 to BR-013]
-- [X] T047 [US1] Implement Personal registration view, route, and template in `users/views.py`, `users/urls.py`, and `templates/users/register_personal.html`; verify Personal registration view tests pass. [FR-001, UX-003]
-- [X] T048 [US2] Implement Personal dashboard and Personal Account initial state in `banking/views.py`, `banking/urls.py`, and `banking/templates/banking/personal_dashboard.html`; verify Personal user sees balance and phone only. [FR-011 to FR-014, UX-005]
-- [X] T049 [US1] Add access denial integration tests in `users/tests/test_access_context.py` proving Personal users cannot access Business pages or invitations after registration; verify tests pass. [FR-006 to FR-010, SEC-002, TEST-004]
+- [ ] T043 [P] [US1] Create Personal registration tests in `banking/tests/test_personal_registration.py` for success, `SGD 0.00`, no opening deposit, duplicate email, duplicate phone, password hashing, no Business access, and Business page denial covering FR-011-FR-020, TEST-001, TEST-007-TEST-008.
 
-**Checkpoint**: Personal registration and initial Personal Account are independently usable.
+### Implementation
 
-## Phase 8: New Business Account Registration and Initial AUTHORISER Creation
+- [ ] T044 [US1] Implement Personal registration form in `users/forms.py` for display name, email, password confirmation, unique phone number, and server-side `PERSONAL` context covering FR-011-FR-014 verification by registration tests.
+- [ ] T045 [US1] Implement Personal registration service in `banking/services/registration.py` to atomically create `PERSONAL` user and PersonalAccount at `SGD 0.00` with no opening transaction covering FR-011-FR-015 verification by tests.
+- [ ] T046 [US1] Implement Personal registration view and route in `users/views.py` and `users/urls.py` covering FR-011-FR-015 verification by client tests.
+- [ ] T047 [US1] Implement Personal registration template in `templates/users/register_personal.html` with no Business controls and clear phone/no-opening-deposit messaging covering UX-005 verification by view tests.
+- [ ] T048 [US1] Run `python3 manage.py test banking.tests.test_personal_registration users.tests.test_access_context` and fix only Personal registration defects for TEST-001, TEST-004, TEST-007-TEST-008.
 
-**Goal**: Business registration creates Business-only access, Business Account, initial AUTHORISER, opening deposit, and access audit records. [US1, US3]
+## Phase 8: Business Account Registration and Initial AUTHORISER Creation
 
-**Independent Test**: Registering a Business creator with valid UEN and opening deposit creates all required records atomically and no Personal Account.
+**Purpose**: Implement company Business Account opening with active initial AUTHORISER.
 
-- [X] T050 [P] [US3] Add Business registration service and view tests in `banking/tests/test_business_registration.py` for exact SGD 7,000.00, above SGD 7,000.00, below SGD 7,000.00, missing display name, missing/duplicate UEN, UEN normalization, Business-only identity, no Personal Account, initial AUTHORISER, opening transaction UUID, initial audit events, and rollback; verify tests fail first. [FR-020 to FR-026, TEST-002, TEST-009 to TEST-010]
-- [X] T051 [US3] Implement Business registration form in `users/forms.py` with creator username, email, password confirmation, business display name, UEN, and opening deposit; verify form validation tests pass. [FR-020 to FR-024, UX-004]
-- [X] T052 [US3] Implement Business registration service in `banking/services/accounts.py` to create `BUSINESS` user, Business Account, initial AUTHORISER membership, `BUSINESS_OPENING_DEPOSIT`, and Access Audit Events atomically; verify service tests pass. [FR-020 to FR-026, BR-014 to BR-018]
-- [X] T053 [US3] Implement Business registration view, route, and template in `users/views.py`, `users/urls.py`, and `templates/users/register_business.html`; verify Business registration view tests pass. [FR-001, UX-004]
-- [X] T054 [US3] Implement initial Business dashboard route/template in `banking/views.py`, `banking/urls.py`, and `banking/templates/banking/business_dashboard.html`; verify creator sees Business Account, UEN, role AUTHORISER, balance, and retained-minimum notice. [UX-007 to UX-008]
-- [X] T055 [US1] Add cross-context denial tests proving Business users cannot access Personal pages or operations; verify tests pass. [FR-006 to FR-010, SEC-002, TEST-005]
+### Tests
 
-**Checkpoint**: Business Account creation is independent of Personal Accounts and creates initial governance records.
+- [ ] T049 [P] [US3] Create Business registration tests in `banking/tests/test_business_registration.py` for exact/above opening deposit, below/invalid amount rejection, display name, UEN, duplicate UEN, UEN normalization, active initial AUTHORISER, opening transaction UUID, initial audit events, no Personal Account, and atomic rollback covering FR-021-FR-031, TEST-002, TEST-009-TEST-010.
 
-## Phase 9: Authenticated Midnight Ledger Shell and Context-Specific Navigation
+### Implementation
 
-**Goal**: Authenticated Personal and Business users see separate navigation and base layouts. [US7]
+- [ ] T050 [US3] Implement Business registration form in `users/forms.py` for initial AUTHORISER display name, unique email, password, business display name, UEN normalization, and opening deposit covering FR-021, FR-028-FR-031 verification by tests.
+- [ ] T051 [US3] Implement Business registration service in `banking/services/registration.py` to atomically create `BUSINESS_EMPLOYEE` user, BusinessAccount, active AUTHORISER access, opening transaction, and Access Audit events covering FR-022-FR-027 verification by tests.
+- [ ] T052 [US3] Implement Business registration view and route in `users/views.py` and `users/urls.py` covering FR-021-FR-027 verification by client tests.
+- [ ] T053 [US3] Implement Business registration template in `templates/users/register_business.html` explaining UEN, opening funding, provisioned employee access, and approval controls covering UX-006 verification by view tests.
+- [ ] T054 [US3] Run `python3 manage.py test banking.tests.test_business_registration users.tests.test_access_context` and fix only Business registration defects for TEST-002, TEST-005, TEST-009-TEST-010.
 
-**Independent Test**: Personal and Business users get different navigation, while server-side permission tests still deny forbidden routes.
+## Phase 9: Authenticated Personal and Business Application Shells
 
-- [X] T056 [P] [US7] Add navigation and layout tests in `banking/tests/test_navigation_layouts.py` for Personal nav, Business nav, multi-membership selector placeholder, signed-in identity display, and forbidden link absence; verify tests fail first. [UX-005 to UX-007, TEST-055]
-- [X] T057 [US7] Implement `templates/base_personal.html` with Dashboard, Personal Account, Deposit, Withdraw, Transfer, Transactions, and Sign Out navigation; verify Personal navigation tests pass. [UX-005 to UX-006]
-- [X] T058 [US7] Implement `templates/base_business.html` with Business Dashboard, context selector, Deposit, Request Withdrawal, Request Transfer, Approvals, Members, Invitations, Access Audit, Transactions, and Sign Out navigation; verify Business navigation tests pass. [UX-007]
-- [X] T059 [US7] Add reusable includes in `templates/includes/` for status badges, alerts, form errors, empty states, result panels, amount display, and confirmation summaries; verify templates render without missing includes. [UX-015 to UX-019]
-- [X] T060 [US7] Expand `static/css/midnight-ledger.css` with design tokens, shell layout, cards, forms, buttons, focus states, status badges, and responsive basics; verify no external CSS framework is referenced. [UX-001, UX-017, UX-020 to UX-021]
+**Purpose**: Create role-specific app shells and remove v2 navigation.
 
-**Checkpoint**: Authenticated shell supports distinct Personal and Business experiences.
+- [ ] T055 [P] [US7] Create UI permission/navigation tests in `banking/tests/test_ui_permissions.py` for Personal nav, Business nav, no Invitations nav, no Business Account selector, hidden controls plus server-side denial covering UX-007-UX-010, TEST-068-TEST-069.
+- [ ] T056 [US7] Implement Personal authenticated shell in `templates/base_personal.html` with Dashboard, Personal Account, Deposit, Withdraw, Transfer, Transactions, and Sign Out only covering UX-007-UX-008 verification by UI tests.
+- [ ] T057 [US7] Implement Business authenticated shell in `templates/base_business.html` with Business Dashboard, Deposit, Request Withdrawal, Request Transfer, Approvals, Team Access, Access Audit, Transactions, and Sign Out only covering UX-009-UX-010 verification by UI tests.
+- [ ] T058 [US7] Remove or replace Invitations navigation and Business Account selector references in shared templates under `templates/` covering FR-034, FR-066 verification by UI tests and search.
+- [ ] T059 [US7] Add reusable balance card, metric card, status badge, alert, confirmation, and data panel includes in `templates/includes/` covering UX-002-UX-003 verification by manual UI review.
+- [ ] T060 [US7] Extend responsive authenticated layout CSS in `static/css/midnight-ledger.css` covering UX-001-UX-003, UX-027-UX-029 verification by manual UI review.
+- [ ] T061 [US7] Run `python3 manage.py test banking.tests.test_ui_permissions` and fix only shell/navigation defects for TEST-068-TEST-069.
 
-## Phase 10: Business Invitation Creation and Acceptance
+## Phase 10: Mandatory First-Login Password Change
 
-**Goal**: AUTHORISERS invite Business users and invited Business-only users accept access. [US4]
+**Purpose**: Enforce password-change-required status before normal Business access.
 
-**Independent Test**: Invitations grant no access until acceptance; Personal users cannot accept; Business users can join multiple accounts.
+### Tests
 
-- [X] T061 [P] [US4] Add invitation tests in `banking/tests/test_invitations.py` for AUTHORISER inviting MEMBER/AUTHORISER, MEMBER invite rejection, duplicate pending invite rejection, no access before acceptance, matching Business login acceptance, new Business-only registration from invite, Personal acceptance rejection, mismatched email rejection, multi-account membership, intended role assignment, and audit events; verify tests fail first. [FR-038 to FR-041, TEST-037 to TEST-043]
-- [X] T062 [US4] Implement invitation creation service in `banking/services/invitations.py` with AUTHORISER-only permission, invitee email, role selection, duplicate pending rule, PENDING status, and `INVITATION_ISSUED` audit event; verify invitation service tests pass. [FR-038 to FR-039]
-- [X] T063 [US4] Implement invitation acceptance service in `banking/services/invitations.py` with matching Business email, Personal rejection, membership creation, invitation ACCEPTED status, role assignment, and audit events inside one transaction; verify acceptance tests pass. [FR-039 to FR-041]
-- [X] T064 [US4] Implement invitation-specific Business registration support in `users/forms.py`, `users/views.py`, and `templates/users/register_business_invited.html`; verify invited new Business user tests pass. [FR-040, TEST-040]
-- [X] T065 [US4] Implement invitation list, create, and accept views/templates in `banking/views.py`, `banking/urls.py`, and `banking/templates/banking/invitations/`; verify no real email delivery dependency exists. [UX-007, SEC-005]
+- [ ] T062 [P] [US4] Create mandatory password-change tests in `banking/tests/test_password_workflows.py` for provisioned sign-in routing, Business page blocking, successful activation, post-activation access, and no password content in audit covering FR-039-FR-042, SEC-004, TEST-017-TEST-020.
 
-**Checkpoint**: Business invitations and acceptance work without shared credentials or email infrastructure.
+### Implementation
 
-## Phase 11: Business Membership Viewing and Context Selection
+- [ ] T063 [US4] Implement password-change-required guard in `users/permissions.py` or middleware selected by `plan.md` covering SEC-004 verification by password workflow tests.
+- [ ] T064 [US4] Implement mandatory password-change service in `banking/services/access.py` using Django password setting, access transition to `ACTIVE`, and Access Audit event covering FR-041-FR-042, FR-094 verification by tests.
+- [ ] T065 [US4] Implement mandatory password-change view and route in `users/views.py` and `users/urls.py` covering FR-041-FR-042 verification by client tests.
+- [ ] T066 [US4] Implement branded password-change template in `templates/users/password_change_required.html` with restricted navigation and clear security checkpoint messaging covering UX-019 verification by UI review.
+- [ ] T067 [US4] Run `python3 manage.py test banking.tests.test_password_workflows` and fix only mandatory password-change defects for TEST-017-TEST-020.
 
-**Goal**: Business users select among active memberships and lose access immediately when removed. [US4, US7]
+## Phase 11: Business Dashboard Redesign
 
-**Independent Test**: A Business user with multiple memberships can switch account context and cannot access removed accounts.
+**Purpose**: Deliver a non-sparse Business Dashboard with account context and operational summaries.
 
-- [X] T066 [P] [US4] Add membership context tests in `banking/tests/test_business_context.py` for active membership lookup, multi-account selector, selected context, removed account denial, other membership preservation, and Personal context rejection; verify tests fail first. [FR-027, FR-047 to FR-048, TEST-042 to TEST-043, TEST-049]
-- [X] T067 [US4] Implement active membership lookup and selected Business Account context helper in `banking/services/memberships.py`; verify helper tests pass. [FR-027, SEC-003]
-- [X] T068 [US7] Implement Business Account selector view/template in `banking/views.py` and `banking/templates/banking/business_account_selector.html`; verify multi-membership selector tests pass. [UX-007]
-- [X] T069 [US7] Expand Business dashboard in `banking/views.py` and `banking/templates/banking/business_dashboard.html` to show display name, UEN, balance, retained minimum, role, pending count, recent transactions, and recent request activity; verify dashboard tests pass. [UX-008]
-- [X] T070 [US4] Enforce removed membership denial across Business views using active membership helper; verify removed-user access tests pass. [FR-047, SEC-004, NFR-008]
+- [ ] T068 [P] [US7] Add Business Dashboard tests in `banking/tests/test_ui_permissions.py` for business name, UEN, employee name, role, access state, balance, retained minimum, pending count, recent activity, and AUTHORISER-only Team Access summary covering UX-011-UX-012, TEST-068-TEST-069.
+- [ ] T069 [US7] Implement Business Dashboard query/service helpers in `banking/services/dashboard.py` for balance, pending count, recent transactions, recent approvals, and Team Access summary covering UX-011 verification by dashboard tests.
+- [ ] T070 [US7] Implement Business Dashboard view in `banking/views.py` and route in `banking/urls.py` with active employee permission enforcement covering FR-048, SEC-003-SEC-005 verification by tests.
+- [ ] T071 [US7] Implement redesigned Business Dashboard template in `templates/banking/business_dashboard.html` using summary cards and data panels covering UX-011-UX-012, UX-029 verification by UI tests and manual review.
+- [ ] T072 [US7] Run `python3 manage.py test banking.tests.test_ui_permissions` and manually verify desktop layout uses content area effectively for TEST-068-TEST-069.
 
-**Checkpoint**: Business membership context controls access for all Business pages.
+## Phase 12: Team Access Data Model Operations and Access Audit Foundations
 
-## Phase 12: Membership Administration and Access Audit Events
+**Purpose**: Replace Invitations with Team Access overview and audit utilities.
 
-**Goal**: AUTHORISERS manage members while preserving last-AUTHORISER protection and access auditability. [US4]
+### Tests
 
-**Independent Test**: Allowed governance actions succeed, forbidden ones fail, and all outcomes are auditable.
+- [ ] T073 [P] [US4] Create Team Access overview tests in `banking/tests/test_employee_access.py` for AUTHORISER management data, MEMBER read-only/denied controls, no active Invitations route, role/status display, and no password output covering FR-048, FR-066, FR-094, TEST-012, TEST-020.
 
-- [X] T071 [P] [US4] Add membership administration tests in `banking/tests/test_memberships.py` for promote MEMBER, MEMBER cannot promote/remove, remove MEMBER, remove another AUTHORISER when another remains, final AUTHORISER removal rejection, demotion rejection, immediate access loss, and audit events; verify tests fail first. [FR-042 to FR-048, TEST-044 to TEST-050]
-- [X] T072 [US4] Implement promotion service in `banking/services/memberships.py` for AUTHORISER-only MEMBER-to-AUTHORISER promotion plus `MEMBER_PROMOTED_TO_AUTHORISER` audit event; verify promotion tests pass. [FR-042, TEST-044]
-- [X] T073 [US4] Implement removal service in `banking/services/memberships.py` for MEMBER removal and AUTHORISER removal with last-AUTHORISER protection plus audit events; verify removal tests pass. [FR-043 to FR-045, TEST-045 to TEST-047]
-- [X] T074 [US4] Implement explicit demotion rejection path in `banking/services/memberships.py`; verify demotion rejection tests pass and no supported UI action implies demotion. [FR-046, TEST-048]
-- [X] T075 [US4] Implement member roster and management views/templates in `banking/views.py`, `banking/urls.py`, and `banking/templates/banking/members/`; verify AUTHORISER controls and MEMBER read-only states render correctly. [UX-009 to UX-010, SEC-005]
-- [X] T076 [US4] Add audit event assertions for promotions, removals, rejected final-authoriser removal, and access denial in `banking/tests/test_memberships.py`; verify Access Audit records do not create financial transactions. [FR-076 to FR-077, TEST-050, TEST-053]
+### Implementation
 
-**Checkpoint**: Business membership administration is role-safe and auditable.
+- [ ] T074 [US4] Implement Access Audit event creation utility in `banking/services/access_audit.py` that never stores password values or hashes covering FR-094, SEC-008 verification by tests.
+- [ ] T075 [US4] Implement Team Access list/query service in `banking/services/access.py` for employee rows and counts by active, AUTHORISER, PASSWORD_CHANGE_REQUIRED, and DEACTIVATED covering UX-014-UX-016 verification by tests.
+- [ ] T076 [US4] Remove or replace invitation routes in `banking/urls.py` and invitation view handlers in `banking/views.py` with Team Access routes covering FR-066 verification by route tests and search.
+- [ ] T077 [US4] Replace invitation screens and labels with Team Access template `templates/banking/team_access.html` covering UX-013-UX-018 verification by UI tests.
+- [ ] T078 [US4] Remove or quarantine superseded invitation tests in `banking/tests/test_invitations_memberships.py` by replacing them with v3 employee-access tests covering TEST-012 verification by test suite.
+- [ ] T079 [US4] Run `python3 manage.py test banking.tests.test_employee_access` and search for active invitation routes/labels for TEST-012, TEST-020 verification.
 
-## Phase 13: Personal Financial Dashboard, Deposits, and Withdrawals
+## Phase 13: Add Employee Access Provisioning
 
-**Goal**: Personal users can view account details, deposit, withdraw, and see completed transaction records. [US2]
+**Purpose**: AUTHORISERS directly create employee credentials scoped to one Business Account.
 
-**Independent Test**: Personal money operations are owner-only, Decimal-valid, atomic, and auditable.
+### Tests
 
-- [X] T077 [P] [US2] Add Personal deposit tests in `banking/tests/test_deposits.py` for valid deposit, zero/negative/malformed/excessive precision rejection, transaction UUID creation, no change on rejection, and owner-only access; verify tests fail first. [FR-015, FR-069, TEST-012, TEST-014]
-- [X] T078 [P] [US2] Add Personal withdrawal tests in `banking/tests/test_personal_withdrawals.py` for valid withdrawal, full-balance withdrawal to SGD 0.00, overdraft rejection, invalid amount rejection, transaction UUID creation, and no change on rejection; verify tests fail first. [FR-016 to FR-017, TEST-015 to TEST-016]
-- [X] T079 [US2] Implement Personal deposit service in `banking/services/accounts.py` with owner permission, amount validation, atomic balance update, and completed `DEPOSIT` transaction; verify deposit tests pass. [FR-015, BR-038]
-- [X] T080 [US2] Implement Personal withdrawal service in `banking/services/accounts.py` with owner permission, sufficient funds, SGD 0.00 allowed, atomic debit, and completed `WITHDRAWAL` transaction; verify withdrawal tests pass. [FR-016 to FR-017, BR-012]
-- [X] T081 [US2] Implement Personal Account detail, deposit, and withdrawal views/forms/templates in `banking/forms.py`, `banking/views.py`, and `banking/templates/banking/personal/`; verify view tests and CSRF-protected POST flows pass. [UX-005, UX-016]
-- [X] T082 [US2] Implement Personal recent transaction preview query in `banking/views.py`; verify completed Personal deposit/withdrawal rows appear and rejected attempts do not. [FR-074, TEST-051]
+- [ ] T080 [P] [US4] Extend `banking/tests/test_employee_access.py` for AUTHORISER creates MEMBER, AUTHORISER creates AUTHORISER, MEMBER denial, duplicate email, one Business Account scope, PASSWORD_CHANGE_REQUIRED, hashed temporary password, no plaintext/audit password, no invitation record, and atomic audit covering FR-037-FR-040, TEST-013-TEST-017, TEST-020.
 
-**Checkpoint**: Personal account core money operations are complete and auditable.
+### Implementation
 
-## Phase 14: Business Deposits
+- [ ] T081 [US4] Implement Add Employee Access form in `banking/forms.py` with display name, email, role, temporary password, confirmation, and AUTHORISER role warning validation covering FR-038 verification by tests.
+- [ ] T082 [US4] Implement `provision_employee_access` service in `banking/services/access.py` for active AUTHORISER permission, global email uniqueness, Django password hashing, scoped BusinessEmployeeAccess creation, `PASSWORD_CHANGE_REQUIRED`, and Access Audit events covering FR-037-FR-040 verification by tests.
+- [ ] T083 [US4] Implement Add Employee Access view and route in `banking/views.py` and `banking/urls.py` covering FR-037-FR-040 verification by client tests.
+- [ ] T084 [US4] Implement Add Employee Access template and AUTHORISER-role confirmation in `templates/banking/add_employee_access.html` covering UX-017 verification by UI review.
+- [ ] T085 [US4] Implement provisioning success template in `templates/banking/add_employee_access_success.html` with next-step instructions and no retrievable password display covering SEC-008 verification by tests.
+- [ ] T086 [US4] Run `python3 manage.py test banking.tests.test_employee_access banking.tests.test_password_workflows` and fix only provisioning defects for TEST-013-TEST-020.
 
-**Goal**: Active Business members deposit funds without approval. [US3, US4]
+## Phase 14: Temporary Password Reset
 
-**Independent Test**: MEMBER and AUTHORISER deposits complete immediately; non-members and Personal users are denied.
+**Purpose**: Let active AUTHORISERS reset another employee's temporary password securely.
 
-- [X] T083 [P] [US4] Add Business deposit tests in `banking/tests/test_business_deposits.py` for MEMBER deposit, AUTHORISER deposit, non-member rejection, Personal rejection, invalid amount rejection, completed transaction UUID, actor attribution, and no approval request; verify tests fail first. [FR-030, BR-024, TEST-012 to TEST-013]
-- [X] T084 [US4] Implement Business deposit service in `banking/services/accounts.py` with active membership permission, amount validation, atomic balance update, actor attribution, and completed `DEPOSIT` transaction; verify Business deposit service tests pass. [FR-030, BR-024, BR-038]
-- [X] T085 [US4] Implement Business deposit form/view/template in `banking/forms.py`, `banking/views.py`, and `banking/templates/banking/business/deposit.html`; verify MEMBER and AUTHORISER view tests pass. [UX-007, UX-016]
-- [X] T086 [US4] Add assertions that Business deposits do not create Business Approval Requests in `banking/tests/test_business_deposits.py`; verify tests pass. [BR-024, TEST-013]
+### Tests
 
-**Checkpoint**: Business deposits are immediate, permission-checked, and not part of approval workflow.
+- [ ] T087 [P] [US4] Create password reset tests in `banking/tests/test_password_reset.py` for AUTHORISER resets MEMBER, AUTHORISER resets another AUTHORISER, MEMBER denial, normal access blocked until change, prior password invalid, no password audit content, and self-reset rejection covering FR-044-FR-047, TEST-021-TEST-024.
 
-## Phase 15: Recipient Resolution and Safe Transfer Confirmation
+### Implementation
 
-**Goal**: Shared transfer lookup safely resolves Personal-by-phone and Business-by-UEN destinations before movement or request creation. [US5]
+- [ ] T088 [US4] Implement temporary password reset form in `banking/forms.py` with password confirmation and target employee validation covering FR-044-FR-047 verification by tests.
+- [ ] T089 [US4] Implement `reset_employee_temporary_password` service in `banking/services/access.py` for active AUTHORISER, same Business Account, no administrative self-reset, Django password replacement, `PASSWORD_CHANGE_REQUIRED`, and audit event covering FR-044-FR-047 verification by tests.
+- [ ] T090 [US4] Implement reset password view and route in `banking/views.py` and `banking/urls.py` covering FR-044-FR-047 verification by client tests.
+- [ ] T091 [US4] Implement reset confirmation and success templates in `templates/banking/reset_employee_password.html` covering UX-020 verification by UI review.
+- [ ] T092 [US4] Run `python3 manage.py test banking.tests.test_password_reset banking.tests.test_password_workflows` and fix only reset workflow defects for TEST-021-TEST-024.
 
-**Independent Test**: Lookup and confirmation work without moving funds.
+## Phase 15: Employee Promotion, Deactivation, and Reactivation
 
-- [X] T087 [P] [US5] Add recipient resolution tests in `banking/tests/test_recipient_resolution.py` for Personal phone lookup, Business UEN lookup, unknown phone, unknown UEN, identifier mismatch, self-transfer, normalization, and no sensitive data in confirmation; verify tests fail first. [FR-049 to FR-054, SEC-008, TEST-019 to TEST-021]
-- [X] T088 [US5] Implement recipient resolver and safe preview functions in `banking/services/transfers.py` with destination type, phone/UEN normalization, unknown/mismatch errors, and self-transfer rejection; verify T087 service tests pass. [FR-049 to FR-054, BR-034 to BR-035]
-- [X] T089 [US5] Implement shared transfer/request review form components in `banking/forms.py` for recipient type, matching identifier, and SGD amount; verify form-level validation tests pass. [FR-051, UX-014]
-- [X] T090 [US5] Implement server-rendered safe recipient confirmation templates in `banking/templates/banking/transfers/confirm.html`; verify view tests show recipient name/type/masked identifier and no sensitive email or credentials. [SEC-008, UX-014]
+**Purpose**: Implement AUTHORISER-only access administration with final-AUTHORISER protection.
 
-**Checkpoint**: Recipient resolution and safe confirmation are ready for Personal transfer and Business request flows.
+### Tests
 
-## Phase 16: Personal Outgoing Transfers
+- [ ] T093 [P] [US4] Create access administration tests in `banking/tests/test_access_administration.py` for MEMBER promotion, MEMBER admin denial, MEMBER deactivation, eligible AUTHORISER deactivation, final AUTHORISER rejection, deactivated access denial, reactivation requiring temporary password, retained records, and audit events covering FR-057-FR-065, TEST-027-TEST-033.
 
-**Goal**: Personal outgoing transfers complete immediately when valid and funded. [US2, US5]
+### Implementation
 
-**Independent Test**: Personal-to-Personal and Personal-to-Business transfers create atomic linked records.
+- [ ] T094 [US4] Implement promotion form/action service in `banking/services/access.py` and `banking/forms.py` for MEMBER to AUTHORISER and unsupported demotion rejection covering FR-057-FR-058 verification by tests.
+- [ ] T095 [US4] Implement deactivation service in `banking/services/access.py` for MEMBER deactivation, eligible AUTHORISER deactivation, final AUTHORISER rejection, immediate access denial, retained records, and audit events covering FR-059-FR-063 verification by tests.
+- [ ] T096 [US4] Implement reactivation service in `banking/services/access.py` requiring new temporary password and `PASSWORD_CHANGE_REQUIRED` status covering FR-064-FR-065 verification by tests.
+- [ ] T097 [US4] Implement promotion, deactivation, and reactivation views/routes in `banking/views.py` and `banking/urls.py` covering FR-057-FR-065 verification by client tests.
+- [ ] T098 [US4] Implement confirmation/result templates `templates/banking/promote_employee.html`, `templates/banking/deactivate_employee.html`, and `templates/banking/reactivate_employee.html` with last-AUTHORISER messaging covering UX-021 verification by UI review.
+- [ ] T099 [US4] Run `python3 manage.py test banking.tests.test_access_administration banking.tests.test_access_control` and fix only access administration defects for TEST-027-TEST-033, TEST-066.
 
-- [X] T091 [P] [US5] Add Personal transfer tests in `banking/tests/test_personal_transfers.py` for Personal-to-Personal, Personal-to-Business, full-balance transfer to SGD 0.00, insufficient funds, invalid amount, unknown/mismatch/self-transfer rejection, shared Transfer Operation ID, two UUID transaction IDs, and no partial failure state; verify tests fail first. [FR-018 to FR-019, FR-055 to FR-056, FR-070 to FR-073, TEST-017 to TEST-022]
-- [X] T092 [US5] Implement Personal transfer service in `banking/services/transfers.py` with owner permission, recipient resolver, sufficient funds, full-balance allowance, atomic debit/credit, Transfer Operation, and linked transaction records; verify Personal transfer service tests pass. [FR-018 to FR-019, FR-055, BR-037 to BR-038]
-- [X] T093 [US5] Implement Personal transfer views/forms/templates in `banking/views.py`, `banking/forms.py`, and `banking/templates/banking/transfers/` for entry, confirmation, and completed result; verify transfer view tests pass. [UX-014, UX-016]
-- [X] T094 [US5] Add transaction history assertions for Personal transfer debit/credit IDs and shared operation ID in `banking/tests/test_personal_transfers.py`; verify tests pass. [FR-070 to FR-073, TEST-022]
+## Phase 16: Personal Dashboard, Deposits, and Withdrawals
 
-**Checkpoint**: Personal outgoing transfers are complete and auditable.
+**Purpose**: Complete Personal account viewing and immediate Personal deposit/withdrawal flows.
 
-## Phase 17: Business Withdrawal Request Submission
+### Tests
 
-**Goal**: Active Business members submit outgoing withdrawal requests that remain PENDING until AUTHORISER action. [US6]
+- [ ] T100 [P] [US2] Create Personal deposit/withdrawal tests in `banking/tests/test_deposits_withdrawals.py` for valid deposit, invalid deposit, valid withdrawal, full-balance withdrawal to `SGD 0.00`, overdraft rejection, UUID transaction only on success, no balance change on rejection, and owner-only permission covering FR-016-FR-018, TEST-036, TEST-039-TEST-040.
 
-**Independent Test**: Submission creates a workflow record only and moves no funds.
+### Implementation
 
-- [X] T095 [P] [US6] Add Business withdrawal request tests in `banking/tests/test_business_requests.py` for MEMBER submission, AUTHORISER submission, non-member rejection, Personal rejection, PENDING status, requester attribution, unchanged balance, and no completed withdrawal transaction; verify tests fail first. [FR-031, FR-058 to FR-060, TEST-023 to TEST-025]
-- [X] T096 [US6] Implement Business withdrawal request service in `banking/services/approvals.py` with active membership permission, amount validation, requester attribution, PENDING status, and no balance or transaction changes; verify request service tests pass. [FR-031, FR-058 to FR-060]
-- [X] T097 [US6] Implement Business withdrawal request form/view/templates in `banking/forms.py`, `banking/views.py`, and `banking/templates/banking/requests/withdrawal.html`; verify review page explains approval and unchanged balance. [UX-011, UX-016]
-- [X] T098 [US6] Implement Pending request result page in `banking/templates/banking/requests/pending.html`; verify request ID and PENDING status are shown. [UX-018]
+- [ ] T101 [US2] Implement Personal Dashboard and account detail services/views in `banking/views.py` and `banking/urls.py` covering FR-011-FR-020 verification by tests.
+- [ ] T102 [US2] Implement Personal Dashboard and account detail templates in `templates/banking/personal_dashboard.html` and `templates/banking/personal_account.html` with balance, phone identifier, quick actions, and recent transactions covering UX-007 verification by UI review.
+- [ ] T103 [US2] Implement Personal deposit and withdrawal services in `banking/services/accounts.py` using Decimal validation, owner permission, atomic balance updates, and completed transaction UUIDs covering FR-016-FR-018, FR-087 verification by tests.
+- [ ] T104 [US2] Implement Personal deposit/withdrawal forms, views, routes, confirmation pages, and success states in `banking/forms.py`, `banking/views.py`, `banking/urls.py`, and `templates/banking/` covering FR-016-FR-018 verification by client tests.
+- [ ] T105 [US2] Run `python3 manage.py test banking.tests.test_deposits_withdrawals` and fix only Personal deposit/withdrawal defects for TEST-036, TEST-039-TEST-040.
 
-**Checkpoint**: Business withdrawal requests enter approval workflow without moving money.
+## Phase 17: Business Deposits
 
-## Phase 18: Business Transfer Request Submission
+**Purpose**: Allow active Business employees to deposit without approval.
 
-**Goal**: Active Business members submit outgoing transfer requests that remain PENDING until AUTHORISER approval. [US5, US6]
+### Tests
 
-**Independent Test**: Business-to-Personal and Business-to-Business outgoing requests create no completed transfer records while PENDING.
+- [ ] T106 [P] [US6] Extend `banking/tests/test_deposits_withdrawals.py` for active MEMBER deposit, active AUTHORISER deposit, password-change-required denial, deactivated denial, Personal login denial, valid UUID transaction, invalid no movement, and no approval request covering FR-049, FR-077, TEST-037, TEST-049.
 
-- [X] T099 [P] [US6] Add Business transfer request tests in `banking/tests/test_business_transfer_requests.py` for MEMBER Business-to-Personal request, MEMBER Business-to-Business request, AUTHORISER request, non-member rejection, invalid destination, self-transfer, unchanged balances, no Transfer Operation, and no completed transaction records; verify tests fail first. [FR-032, FR-057, FR-059, TEST-023 to TEST-025]
-- [X] T100 [US6] Implement Business transfer request service in `banking/services/approvals.py` using recipient resolver, active membership permission, amount validation, PENDING status, and no financial movement; verify Business transfer request tests pass. [FR-032, FR-057, BR-025]
-- [X] T101 [US6] Implement Business transfer request form/view/templates in `banking/forms.py`, `banking/views.py`, and `banking/templates/banking/requests/transfer.html`; verify safe recipient confirmation and approval-required messaging render. [UX-011, UX-014]
-- [X] T102 [US6] Add assertions in `banking/tests/test_business_transfer_requests.py` that PENDING transfer requests create no `TransferOperation`, `TRANSFER_DEBIT`, or `TRANSFER_CREDIT` records; verify tests pass. [FR-059, TEST-025]
+### Implementation
 
-**Checkpoint**: Business outgoing transfers are represented as PENDING requests only.
+- [ ] T107 [US6] Implement Business deposit service in `banking/services/accounts.py` with active employee permission, no approval request, actor attribution, atomic balance update, and completed transaction UUID covering FR-049, FR-087 verification by tests.
+- [ ] T108 [US6] Implement Business deposit form/view/route/templates in `banking/forms.py`, `banking/views.py`, `banking/urls.py`, and `templates/banking/business_deposit.html` covering FR-049 verification by client tests.
+- [ ] T109 [US6] Run `python3 manage.py test banking.tests.test_deposits_withdrawals banking.tests.test_access_control` and fix only Business deposit defects for TEST-037, TEST-049.
 
-## Phase 19: Business Approval, Rejection, and Cancellation Processing
+## Phase 18: Recipient Resolution and Transfer Review
 
-**Goal**: AUTHORISERS resolve PENDING requests; MEMBERS cancel only their own PENDING requests. [US6]
+**Purpose**: Resolve Personal-by-phone and Business-by-UEN recipients before transfer completion/request.
 
-**Independent Test**: Approval completes or fails atomically according to current validation; rejection/cancellation never moves money.
+### Tests
 
-- [X] T103 [P] [US6] Add approval tests in `banking/tests/test_approvals.py` for MEMBER cannot approve/reject, AUTHORISER approves own/others, one approval sufficient, valid withdrawal completion, valid transfer completion, exactly SGD 7,000.00 success, exactly SGD 6,999.99 FAILED, rejection, cancellation permissions, terminal immutability, and no APPROVED status; verify tests fail first. [FR-035 to FR-068, TEST-026 to TEST-036]
-- [X] T104 [US6] Implement approval list and detail queries in `banking/services/approvals.py` and `banking/views.py`; verify active members see permitted requests with requester, role, amount, destination, status, and dates. [FR-075, UX-011]
-- [X] T105 [US6] Implement approval action for Business withdrawals in `banking/services/approvals.py` with AUTHORISER check, PENDING-only check, balance revalidation, retained-minimum enforcement, atomic debit, completed withdrawal transaction, and COMPLETED or FAILED status; verify withdrawal approval tests pass. [FR-062 to FR-064, BR-023, TEST-035 to TEST-036]
-- [X] T106 [US6] Implement approval action for Business transfers in `banking/services/approvals.py` with AUTHORISER check, retained-minimum enforcement, atomic sender debit, recipient credit, Transfer Operation, linked transactions, and COMPLETED or FAILED status; verify transfer approval tests pass. [FR-062 to FR-064, FR-070 to FR-073]
-- [X] T107 [US6] Implement rejection service in `banking/services/approvals.py` for AUTHORISER-only PENDING-to-REJECTED with no balance movement; verify rejection tests pass. [FR-035, FR-067 to FR-068, TEST-029]
-- [X] T108 [US6] Implement cancellation service in `banking/services/approvals.py` for MEMBER own-request cancellation and AUTHORISER any-request cancellation with PENDING-to-CANCELLED and no balance movement; verify cancellation tests pass. [FR-033, FR-035, TEST-030 to TEST-031]
-- [X] T109 [US6] Implement approval list/detail/action views/templates in `banking/views.py`, `banking/forms.py`, and `banking/templates/banking/approvals/`; verify projected balance, retained-minimum compliance, permitted actions, and status history render. [UX-011, UX-018]
-- [X] T110 [US6] Add regression assertion in `banking/tests/test_approvals.py` that no persisted `APPROVED` status or transition path exists; verify tests pass. [FR-066, BR-031, TEST-032]
+- [ ] T110 [P] [US5] Create recipient resolution tests in `banking/tests/test_recipient_resolution.py` for Personal phone lookup, Business UEN lookup, unknown phone, unknown UEN, mismatched identifier type, self-transfer rejection, and safe confirmation output covering FR-067-FR-072, TEST-043-TEST-045.
 
-**Checkpoint**: Business outgoing approval lifecycle matches constitution v2.0.0.
+### Implementation
 
-## Phase 20: Multiple Pending Requests and Revalidation
+- [ ] T111 [US5] Implement recipient resolution service in `banking/services/transfers.py` for selected destination type, phone/UEN normalization, unknown/mismatch rejection, self-transfer rejection, and safe display data covering FR-067-FR-072 verification by tests.
+- [ ] T112 [US5] Implement shared transfer recipient form and review view helpers in `banking/forms.py` and `banking/views.py` covering FR-069-FR-072 verification by tests.
+- [ ] T113 [US5] Implement recipient confirmation templates in `templates/banking/transfer_review.html` with no sensitive email/credential disclosure covering SEC-009 verification by tests.
+- [ ] T114 [US5] Run `python3 manage.py test banking.tests.test_recipient_resolution` and fix only recipient resolution defects for TEST-043-TEST-045.
 
-**Goal**: Multiple PENDING Business requests coexist without reservation and are independently revalidated. [US6]
+## Phase 19: Personal Outgoing Transfers
 
-**Independent Test**: One completed request can cause a later request to fail at the SGD 6,999.99 boundary.
+**Purpose**: Complete valid Personal transfers immediately and atomically.
 
-- [X] T111 [P] [US6] Add multiple Pending tests in `banking/tests/test_multiple_pending.py` for two or more PENDING requests, unchanged balance, no completed records while Pending, first completion, later SGD 6,999.99 FAILED outcome, no movement for failed request, Approval History outcomes, and Transaction History only showing completed movement; verify tests fail first. [FR-061 to FR-064, TEST-034 to TEST-036]
-- [X] T112 [US6] Adjust request submission and approval services in `banking/services/approvals.py` to explicitly allow multiple PENDING requests and avoid any fund reservation; verify T111 pending/no-reservation tests pass. [FR-059 to FR-061, BR-028 to BR-030]
-- [X] T113 [US6] Ensure approval services re-read current balances and independently revalidate each request at approval time; verify later SGD 6,999.99 failure tests pass. [FR-062 to FR-064, TEST-036]
-- [X] T114 [US6] Add history assertions for mixed COMPLETED and FAILED outcomes in `banking/tests/test_multiple_pending.py`; verify Approval History and Transaction History separation pass. [FR-074 to FR-077, TEST-051 to TEST-053]
+### Tests
 
-**Checkpoint**: Pending Business requests behave correctly under current-state revalidation.
+- [ ] T115 [P] [US5] Create Personal transfer tests in `banking/tests/test_transfers.py` for Personal-to-Personal, Personal-to-Business, full-balance boundary, insufficient funds, invalid amount, linked debit/credit records, shared operation ID, and no partial state covering FR-073, FR-088-FR-091, TEST-041-TEST-046.
 
-## Phase 21: Transaction History, Approval History, and Access Audit History
+### Implementation
 
-**Goal**: Users can view three distinct audit/history areas with correct access control. [US8]
+- [ ] T116 [US5] Implement Personal transfer service in `banking/services/transfers.py` with owner permission, sufficient funds, full-balance `SGD 0.00`, TransferOperation, linked transactions, and atomic update covering FR-073, FR-088-FR-091 verification by tests.
+- [ ] T117 [US5] Implement Personal transfer form/view/route/result templates in `banking/forms.py`, `banking/views.py`, `banking/urls.py`, and `templates/banking/personal_transfer.html` covering FR-067-FR-073 verification by client tests.
+- [ ] T118 [US5] Run `python3 manage.py test banking.tests.test_recipient_resolution banking.tests.test_transfers` and fix only Personal transfer defects for TEST-041-TEST-046.
 
-**Independent Test**: Each history contains only its approved record types and denies unauthorised access.
+## Phase 20: Business Outgoing Withdrawal Requests
 
-- [X] T115 [P] [US8] Add Transaction History tests in `banking/tests/test_histories_transactions.py` for Personal and Business completed movements only, UUIDs, Transfer Operation IDs, debit/credit labels, filters, and exclusion of workflow/access records; verify tests fail first. [FR-074, TEST-051]
-- [X] T116 [P] [US8] Add Approval History tests in `banking/tests/test_histories_approvals.py` for Business outgoing workflow records, statuses, requester, actioning AUTHORISER, dates, destinations, outcome reasons, and exclusion from Transaction History; verify tests fail first. [FR-075, TEST-052]
-- [X] T117 [P] [US8] Add Access Audit History tests in `banking/tests/test_histories_access_audit.py` for creation, initial AUTHORISER, invitations, acceptances, role assignments, promotions, removals, rejected final-authoriser removal, and separation from financial transactions; verify tests fail first. [FR-076 to FR-077, TEST-050, TEST-053]
-- [X] T118 [P] [US8] Add history access-control tests in `banking/tests/test_histories_access_control.py` for Personal ownership, Business active membership, removed-user denial, Personal-to-Business denial, and Business-to-Personal denial; verify tests fail first. [FR-078, SEC-003 to SEC-004, TEST-054]
-- [X] T119 [US8] Implement Transaction History query/service and views/templates in `banking/views.py` and `banking/templates/banking/histories/transactions.html`; verify Transaction History tests pass. [FR-074, UX-012 to UX-013]
-- [X] T120 [US8] Implement Approval History query/service and views/templates in `banking/views.py` and `banking/templates/banking/histories/approvals.html`; verify Approval History tests pass. [FR-075, UX-012 to UX-013]
-- [X] T121 [US8] Implement Access Audit History query/service and views/templates in `banking/views.py` and `banking/templates/banking/histories/access_audit.html`; verify Access Audit tests pass. [FR-076 to FR-077, UX-012 to UX-013]
-- [X] T122 [US8] Enforce history access checks using Personal owner and active Business membership helpers; verify history access-control tests pass. [FR-078, SEC-003 to SEC-004]
+**Purpose**: Submit Business withdrawal requests as Pending with no money movement.
 
-**Checkpoint**: Transaction, Approval, and Access Audit histories are distinct and permission-controlled.
+### Tests
 
-## Phase 22: Midnight Ledger UI Completion, Accessibility, and Responsive Behaviour
+- [ ] T119 [P] [US6] Create Business request tests in `banking/tests/test_business_requests.py` for MEMBER withdrawal request, AUTHORISER withdrawal request, password-change-required denial, deactivated denial, Personal denial, PENDING status, no balance movement, and no completed financial record covering FR-050, FR-076-FR-079, TEST-047-TEST-049.
 
-**Goal**: Complete the premium server-rendered Midnight Ledger UI across all flows. [US7]
+### Implementation
 
-**Independent Test**: Core pages remain readable, role-aware, labelled, keyboard-friendly, and clear at desktop and narrow widths.
+- [ ] T120 [US6] Implement Business withdrawal request service in `banking/services/approvals.py` with active employee permission, amount validation, requester attribution, `PENDING` creation, and no financial movement covering FR-050, FR-076-FR-079 verification by tests.
+- [ ] T121 [US6] Implement Business withdrawal request form/view/route/templates in `banking/forms.py`, `banking/views.py`, `banking/urls.py`, and `templates/banking/business_withdrawal_request.html` covering FR-050, FR-076 verification by client tests.
+- [ ] T122 [US6] Run `python3 manage.py test banking.tests.test_business_requests` and fix only withdrawal request defects for TEST-047-TEST-049.
 
-- [X] T123 [P] [US7] Add UI acceptance tests in `banking/tests/test_ui_acceptance.py` for registration choice, Personal navigation, Business navigation, role-aware controls, labelled forms, status text, confirmation pages, SGD formatting, and basic responsive class/structure expectations; verify tests fail first where UI is incomplete. [UX-001 to UX-021, TEST-055]
-- [X] T124 [US7] Complete Midnight Ledger CSS in `static/css/midnight-ledger.css` for public pages, authenticated shells, cards, forms, tables/lists, status badges, focus states, alerts, empty states, and responsive narrow-width behavior; verify UI acceptance tests pass where automated. [UX-001, UX-017, UX-020 to UX-021]
-- [X] T125 [US7] Apply reusable includes from `templates/includes/` across Personal, Business, invitation, membership, transfer, approval, and history templates; verify no template duplicates obsolete status or error treatment. [UX-015 to UX-018]
-- [X] T126 [US7] Ensure all financial and membership-changing views include server-rendered confirmation or review pages before final action; verify UI acceptance and flow tests pass. [UX-016]
-- [X] T127 [US7] Create manual UI verification checklist in `specs/001-banking-mvp/ui-acceptance.md` covering Midnight Ledger visual direction, keyboard navigation, focus states, non-colour-only statuses, narrow-width readability, and role-aware controls; verify it maps to `UX-001` through `UX-021`. [UX-001 to UX-021, TEST-055]
+## Phase 21: Business Outgoing Transfer Requests
 
-**Checkpoint**: UI meets clarified premium and accessibility expectations without frontend frameworks.
+**Purpose**: Submit Business transfer requests as Pending with no completed transfer records.
 
-## Phase 23: Security, Permission Enforcement, and Repository Hygiene
+### Tests
 
-**Purpose**: Harden server-side permissions, sensitive output, CSRF, and repository safety.
+- [ ] T123 [P] [US6] Extend `banking/tests/test_business_requests.py` for MEMBER Business-to-Personal request, MEMBER Business-to-Business request, AUTHORISER request, invalid destination, self-transfer rejection, inactive/restricted employee denial, and no completed money movement covering FR-051, FR-075-FR-079, TEST-047-TEST-049.
 
-- [X] T128 [P] Add security regression tests in `banking/tests/test_security_permissions.py` for Personal/Business cross-context denial, non-member Business denial, AUTHORISER-only actions, requester cancellation rules, final-AUTHORISER protection, CSRF expectations, and safe errors; verify tests fail for any missing protections. [SEC-001 to SEC-009, TEST-054]
-- [X] T129 [P] Add repository hygiene checks in `specs/001-banking-mvp/security-hygiene.md` documenting `.env`, DB, secret, cache, virtualenv, and generated asset exclusions; verify no local secret/database files are tracked by Git. [SEC-010]
-- [X] T130 Enforce CSRF and login protection on all state-changing views in `users/views.py` and `banking/views.py`; verify security regression tests pass. [SEC-001, SEC-009]
-- [X] T131 Audit safe display of phone numbers, UENs, invitee emails, recipient confirmations, errors, and histories in templates under `templates/` and `banking/templates/`; verify no passwords, secret keys, or sensitive credential details can appear. [SEC-007 to SEC-008]
-- [X] T132 Re-run full access-control tests in `users/tests/test_access_context.py`, `banking/tests/test_access_control.py`, and `banking/tests/test_security_permissions.py`; verify all permission-sensitive tests pass. [SEC-001 to SEC-009, TEST-054]
+### Implementation
 
-**Checkpoint**: Security and permission invariants are enforced server-side.
+- [ ] T124 [US6] Implement Business transfer request service in `banking/services/approvals.py` using recipient resolution, active employee permission, `PENDING` creation, and no TransferOperation/transaction creation covering FR-051, FR-075-FR-079 verification by tests.
+- [ ] T125 [US6] Implement Business transfer request form/view/route/templates in `banking/forms.py`, `banking/views.py`, `banking/urls.py`, and `templates/banking/business_transfer_request.html` covering FR-051, FR-075 verification by client tests.
+- [ ] T126 [US6] Run `python3 manage.py test banking.tests.test_business_requests banking.tests.test_recipient_resolution` and fix only Business transfer request defects for TEST-047-TEST-049.
 
-## Phase 24: Traceability, Full Automated Test Suite, and Quality Gates
+## Phase 22: Approval, Rejection, and Cancellation Resolution
 
-**Purpose**: Prove v2.0.0 requirements are implemented, tested, and free of obsolete model behavior.
+**Purpose**: Resolve Business outgoing requests with AUTHORISER approval/rejection/cancellation and MEMBER own cancellation.
 
-- [X] T133 Update `specs/001-banking-mvp/traceability.md` with implemented component paths and test paths for `FR-001` through `FR-080`, `BR-001` through `BR-041`, `SEC-001` through `SEC-010`, `UX-001` through `UX-021`, `NFR-001` through `NFR-008`, and `TEST-001` through `TEST-055`; verify no mapping remains `Pending`. [NFR-005]
-- [X] T134 Run `python manage.py test` for the full Django test suite; verify all mandatory banking, membership, audit, permission, and UI-flow tests pass. [TEST-001 to TEST-055]
-- [X] T135 Run `python manage.py migrate` against a fresh local SQLite database after reset; verify migrations apply cleanly from zero state. [NFR-004]
-- [X] T136 Run `rg "authorised Personal|authorized Personal|own Personal|linked Personal|exactly one author|same-user|same user|Personal Account author|APPROVED" users banking templates specs/001-banking-mvp` and update `specs/001-banking-mvp/refactoring-impact.md` with any remaining matches as removed or intentional references to absence; verify no obsolete implementation behavior remains. [SC-024, BR-014, BR-018, BR-031, BR-036]
-- [X] T137 Verify completed financial transactions are immutable through ordinary user-facing flows by reviewing views/services and tests; record result in `specs/001-banking-mvp/traceability.md`. [BR-039, TEST-051]
-- [X] T138 Document approved MVP limitations in `README.md` or `quickstart.md`, including local-only use, no real banking, no email delivery, no OTP, no external UEN registry, no shared Business credentials, and no production deployment. [NFR-001]
+### Tests
 
-**Checkpoint**: Quality gates pass and traceability is complete.
+- [ ] T127 [P] [US6] Create approval lifecycle tests in `banking/tests/test_approvals.py` for MEMBER approval/rejection denial, AUTHORISER approval of other/own request, one approval suffices, withdrawal completion, transfer completion, `SGD 7,000.00` success, `SGD 6,999.99` failure, rejection, cancellation permissions, terminal rejection, and no APPROVED status covering FR-054-FR-086, TEST-050-TEST-057, TEST-059-TEST-060.
 
-## Phase 25: Local macOS Waitress Deployment and Documentation
+### Implementation
 
-**Purpose**: Finish local run documentation and repository readiness.
+- [ ] T128 [US6] Implement approval list/detail query services in `banking/services/approvals.py` covering FR-093 verification by approval tests.
+- [ ] T129 [US6] Implement `approve_business_request` in `banking/services/approvals.py` for active AUTHORISER, self-approval, approval-time revalidation, retained minimum, direct COMPLETED/FAILED transitions, and atomic financial movement covering FR-080-FR-086 verification by tests.
+- [ ] T130 [US6] Implement `reject_business_request` and `cancel_business_request` in `banking/services/approvals.py` for role-specific permissions, PENDING-only actions, terminal state protection, and no money movement covering FR-052-FR-056, FR-085-FR-086 verification by tests.
+- [ ] T131 [US6] Implement approval list/detail/action views and routes in `banking/views.py` and `banking/urls.py` covering FR-054-FR-086 verification by client tests.
+- [ ] T132 [US6] Implement approval templates in `templates/banking/approvals.html` and `templates/banking/approval_detail.html` with requester, role, projected balance, retained-minimum status, approve/reject/cancel actions, and statuses covering UX-022 verification by UI review.
+- [ ] T133 [US6] Run `python3 manage.py test banking.tests.test_approvals` and fix only approval lifecycle defects for TEST-050-TEST-057, TEST-059-TEST-060.
 
-- [X] T139 Update `quickstart.md` with final virtual environment, dependency installation, environment variable, migration/reset, test, static file, Waitress, browser access, invitation-without-email, multi-Business-account context, and local-only disclaimer instructions; verify commands match implemented project names. [NFR-001, SEC-010]
-- [X] T140 Implement or verify Waitress entry point in `bankapp/waitress_server.py` and document `waitress-serve --listen=127.0.0.1:8000 bankapp.wsgi:application`; verify local launch works. [NFR-001]
-- [X] T141 Verify `python manage.py collectstatic` behavior for local use and document any required static-file steps in `quickstart.md`; verify custom CSS is available. [UX-001]
-- [X] T142 Run final repository hygiene check with `git status --short`, `git ls-files`, and ignored-file inspection; verify no `.env`, local SQLite DB, secret, virtualenv, cache, or generated local asset is staged or tracked. [SEC-010]
+## Phase 23: Multiple Pending Requests and Independent Revalidation
 
-## Dependencies and Execution Order
+**Purpose**: Prove Pending requests do not reserve funds and later approvals revalidate independently.
+
+### Tests
+
+- [ ] T134 [P] [US6] Create multiple Pending tests in `banking/tests/test_multiple_pending.py` for coexistence, unchanged displayed balance, no completed records while Pending, first completion success, later `SGD 6,999.99` failure, no money movement on failure, Approval History outcomes, and Transaction History completed-only display covering FR-077-FR-082, TEST-058-TEST-060.
+
+### Implementation
+
+- [ ] T135 [US6] Adjust `banking/services/approvals.py` and dashboard/history queries to ensure Pending requests do not reserve funds and balance display remains actual current balance covering FR-077-FR-079 verification by multiple Pending tests.
+- [ ] T136 [US6] Run `python3 manage.py test banking.tests.test_multiple_pending banking.tests.test_approvals` and fix only multiple Pending/revalidation defects for TEST-058-TEST-060.
+
+## Phase 24: Transaction History, Approval History, and Access Audit History
+
+**Purpose**: Implement three distinct history areas with access control.
+
+### Tests
+
+- [ ] T137 [P] [US8] Create history tests in `banking/tests/test_histories.py` for completed-only Transaction History, workflow-only Approval History, access/security-only Access Audit History, no password content, password-change-required denial, deactivated denial, Personal denial from Business histories, and MEMBER/AUTHORISER visibility covering FR-092-FR-097, TEST-061-TEST-067.
+
+### Implementation
+
+- [ ] T138 [US8] Implement Transaction History query service and views in `banking/services/histories.py`, `banking/views.py`, and `banking/urls.py` covering FR-092, FR-095-FR-096 verification by history tests.
+- [ ] T139 [US8] Implement Approval History query service and views in `banking/services/histories.py`, `banking/views.py`, and `banking/urls.py` covering FR-093, FR-095-FR-096 verification by history tests.
+- [ ] T140 [US8] Implement Access Audit History query service and views in `banking/services/histories.py`, `banking/views.py`, and `banking/urls.py` covering FR-094-FR-096 verification by history tests.
+- [ ] T141 [US8] Implement distinct history templates `templates/banking/transaction_history.html`, `templates/banking/approval_history.html`, and `templates/banking/access_audit_history.html` covering UX-023 verification by UI review.
+- [ ] T142 [US8] Run `python3 manage.py test banking.tests.test_histories` and fix only history separation/access defects for TEST-061-TEST-067.
+
+## Phase 25: Full Midnight Ledger UI Redesign and Responsive Verification
+
+**Purpose**: Complete the required premium UI after core flows work.
+
+- [ ] T143 [US7] Complete design-system CSS in `static/css/midnight-ledger.css` for variables, typography, spacing, cards, panels, buttons, forms, badges, tables, alerts, empty states, focus indicators, and responsive breakpoints covering UX-001-UX-003, UX-024-UX-029 verification by manual UI checklist.
+- [ ] T144 [US7] Polish public pages in `templates/users/account_type_selection.html`, `templates/users/register_personal.html`, `templates/users/register_business.html`, and `templates/users/login.html` covering UX-004-UX-006 verification by manual UI checklist.
+- [ ] T145 [US7] Polish Personal pages in `templates/banking/personal_dashboard.html`, `templates/banking/personal_account.html`, and Personal financial templates for balance/phone cards, quick actions, transaction preview, and no Business controls covering UX-007-UX-008 verification by manual UI checklist.
+- [ ] T146 [US7] Polish Business Dashboard, Team Access, Add Employee Access, password change, reset, promotion, deactivation, reactivation, request, approval, and history templates under `templates/banking/` and `templates/users/password_change_required.html` covering UX-009-UX-023 verification by manual UI checklist.
+- [ ] T147 [US7] Add or update UI permission tests in `banking/tests/test_ui_permissions.py` for no Invitations, no Business selector, role-specific controls, password-change gating, labelled forms, confirmations, and status text covering TEST-068-TEST-069.
+- [ ] T148 [US7] Perform manual UI verification for desktop content use, no stranded small forms, visible context/role/status, non-colour-only states, destructive confirmations, labels/errors, keyboard focus, contrast, SGD formatting, and narrow width without horizontal scrolling; record results in `specs/001-banking-mvp/quickstart.md` or implementation notes for UX-001-UX-029.
+- [ ] T149 [US7] Run `python3 manage.py test banking.tests.test_ui_permissions users.tests.test_public_onboarding_views` and fix only UI permission/view defects for TEST-068-TEST-069.
+
+## Phase 26: Security, Permissions, and Repository Hygiene
+
+**Purpose**: Harden sensitive flows and repository state.
+
+- [ ] T150 [P] Create security regression tests in `banking/tests/test_access_control.py` for no plaintext temporary-password storage, no password/hash output, mandatory password-change enforcement, deactivated denial, context isolation, Personal owner-only access, AUTHORISER-only admin, cancellation permissions, final AUTHORISER protection, CSRF-protected forms, and safe errors covering SEC-001-SEC-013, TEST-066-TEST-067.
+- [ ] T151 Enforce CSRF and POST-only behavior on all modifying views in `users/views.py` and `banking/views.py` covering SEC-001, SEC-010 verification by security tests.
+- [ ] T152 Verify and fix safe display of phone numbers, UEN values, employee emails, recipient confirmations, errors, and audit metadata in templates under `templates/` covering SEC-008-SEC-010 verification by security tests.
+- [ ] T153 Verify `.gitignore`, secret-key environment loading, local database exclusion, virtual environment exclusion, and local-only disclaimer in `.gitignore`, `bankapp/settings.py`, and `specs/001-banking-mvp/quickstart.md` covering SEC-011 verification by repository hygiene check.
+- [x] T154 Document completed pre-implementation checklist housekeeping: `requirements-quality-v2.md` was archived outside `specs/001-banking-mvp/checklists/`, while compatible `requirements.md` and active `requirements-quality-v3.md` remain in the active checklist path, covering CHK-VERSION-007 verification by checklist scan.
+- [ ] T155 Run `python3 manage.py test banking.tests.test_access_control users.tests.test_access_context` and fix only security/permission defects for SEC-001-SEC-013, TEST-066-TEST-067.
+
+## Phase 27: Full Test Suite, Traceability, and Superseded-Model Removal Gate
+
+**Purpose**: Verify the full v3 implementation and prove obsolete models are gone.
+
+- [ ] T156 Run the full Django test suite with `python3 manage.py test` and fix all failures covering TEST-001-TEST-069 verification by passing suite.
+- [ ] T157 Apply final migrations cleanly to a fresh local SQLite database with `python3 manage.py migrate` after approved reset, then remove any local database from tracked changes covering NFR-004-NFR-005 verification by migration output and `git status`.
+- [ ] T158 Update `specs/001-banking-mvp/traceability.md` with final code component paths, test module paths, and requirement coverage for FR-001-FR-097, BR-001-BR-046, SEC-001-SEC-013, UX-001-UX-029, TEST-001-TEST-069 verification by traceability review.
+- [ ] T159 Search `users/`, `banking/`, `templates/`, `static/`, and `specs/001-banking-mvp/` for active `Invitation`, `Invite Business User`, `Store Invitation`, invitation route/template/service/test, multi-Business membership, Business Account selector, authorised Personal Account, exactly-one-Authoriser, and persisted APPROVED remnants; remove or flag remaining active implementation hits covering FR-066, BR-036 verification by search output.
+- [ ] T160 Verify all constitution v3.0.0 rules have automated or manual verification coverage in `specs/001-banking-mvp/traceability.md` and `specs/001-banking-mvp/tasks.md` covering NFR-005 verification by review.
+- [ ] T161 Verify no `.env`, secret, temporary password, password hash fixture, or local SQLite database file is tracked by Git using `git status --short` and targeted `git ls-files` checks covering SEC-011 verification by repository output.
+
+## Phase 28: Local macOS Deployment and Documentation
+
+**Purpose**: Document local execution and final MVP limitations.
+
+- [ ] T162 Update `specs/001-banking-mvp/quickstart.md` with final virtual environment, dependency installation, environment-variable setup, migration/reset preparation, test execution, static-file handling, and local-only disclaimer covering NFR-001, SEC-011 verification by quickstart review.
+- [ ] T163 Verify or update Waitress launch guidance in `specs/001-banking-mvp/quickstart.md` and `bankapp/waitress_server.py` covering local deployment verification by `waitress-serve --listen=127.0.0.1:8000 bankapp.wsgi:application`.
+- [ ] T164 Document employee credential provisioning, first-login password change, Team Access administration, password reset, deactivation, and reactivation walkthroughs in `specs/001-banking-mvp/quickstart.md` covering FR-037-FR-065 verification by documentation review.
+- [ ] T165 Perform final clean Git verification with `git status --short`, confirm no source-generated secrets/local databases are tracked, and record final run instructions for handoff covering SEC-011 and deployment verification by repository output.
+
+## Dependencies & Execution Order
 
 ### Phase Dependencies
 
-- Phase 1 must finish before replacement implementation begins.
-- Phase 2 depends on Phase 1 and blocks all implementation.
-- Phase 3 must complete before migrations that depend on the custom user model.
-- Phase 4 depends on Phase 3.
-- Phase 5 depends on Phase 4 and blocks money, membership, transfer, and approval services.
-- Phases 6-9 build onboarding and shell after identity/models are ready.
-- Phase 10 depends on Business registration and membership models.
-- Phase 11 depends on invitations/memberships and Business dashboard shell.
-- Phase 12 depends on membership helpers and context selection.
-- Phases 13-14 depend on money validation and account models.
-- Phase 15 depends on account models and money validation.
-- Phase 16 depends on Phase 15.
-- Phases 17-18 depend on Business membership and recipient resolution.
-- Phase 19 depends on Business request submission.
-- Phase 20 depends on approval processing.
-- Phase 21 depends on financial, approval, and access audit records.
-- Phase 22 depends on functional pages.
-- Phases 23-25 are final verification and deployment gates.
+- **Phase 1** must complete before any v3 implementation.
+- **Phase 2** depends on Phase 1 and blocks schema/auth work.
+- **Phase 3** depends on Phase 2 and blocks registration and route protection.
+- **Phase 4** depends on Phase 3 and blocks services.
+- **Phase 5** depends on Phase 4 and blocks financial/access workflows.
+- **Phases 6-8** depend on Phase 5 and establish public onboarding plus account creation.
+- **Phase 9** depends on Phases 6-8 and establishes authenticated shells.
+- **Phases 10-15** depend on Phases 4, 5, 8, and 9 and implement Business employee governance.
+- **Phases 16-19** depend on Phases 5, 7, 8, and 9 and implement Personal operations and transfers.
+- **Phases 20-23** depend on Phases 5, 10, 13, 18, and 19 and implement Business request/approval behavior.
+- **Phase 24** depends on completed financial, approval, and access records.
+- **Phase 25** depends on working pages and flows.
+- **Phases 26-28** are final hardening, verification, traceability, and deployment documentation.
 
 ### User Story Dependencies
 
-- `US1` depends on project setup and custom user identity.
-- `US2` depends on Personal registration/account models and money validation.
-- `US3` depends on Business Account, membership, transaction, and audit models.
-- `US4` depends on Business registration, active membership helpers, and audit events.
-- `US5` depends on Personal/Business account models, money validation, and recipient resolution.
-- `US6` depends on Business memberships, Business request models, and transfer resolution.
-- `US7` depends on public/authenticated views and can be polished incrementally after each feature flow.
-- `US8` depends on completed financial records, approval requests, and access audit events.
+- **US1**: Foundation for login, registration, and contexts; complete first.
+- **US2**: Depends on US1 and money foundations.
+- **US3**: Depends on US1 and model foundations.
+- **US4**: Depends on US3 and employee access model.
+- **US5**: Depends on US2, US3, and recipient resolution.
+- **US6**: Depends on US3, US4, US5 foundations, and approval services.
+- **US7**: Starts with public UI after setup, completes after all page flows exist.
+- **US8**: Depends on financial, approval, and access audit record creation.
 
 ### Parallel Opportunities
 
-- T017 and T018 can run in parallel because they write separate user test modules.
-- T024, T025, T026, and T027 can run in parallel because they write separate banking model test modules.
-- T032 and T033 can run in parallel because money validation and permission helper tests use separate modules.
-- T061, T066, T071, T077, T078, T083, T087, T091, T095, T099, T103, T111, T115, T116, T117, T118, T123, T128, and T129 are isolated test/doc tasks after prerequisites.
-- Do not parallelize tasks that edit `banking/models.py`, migrations, shared service modules, base templates, route files, or shared CSS.
+- T016 and T017 can run in parallel after Phase 2.
+- T031 and T032 can run in parallel after Phase 4.
+- T038 can run while Phase 6 UI implementation tasks are prepared.
+- Test-writing tasks marked `[P]` can run in parallel with other independent test files once prerequisite models/services exist.
+- UI polish tasks T143-T147 can be split after all functional templates exist because they touch related but separable page groups; coordinate edits to shared CSS.
 
-## Parallel Examples
+## Parallel Example: Employee Access Tests
 
 ```bash
-# After Phase 3 prerequisites, model tests can be drafted independently:
-Task T024: banking/tests/test_models_accounts.py
-Task T025: banking/tests/test_models_memberships.py
-Task T026: banking/tests/test_models_financial_records.py
-Task T027: banking/tests/test_models_approvals.py
-
-# After Phase 5 prerequisites, distinct feature tests can be drafted independently:
-Task T061: banking/tests/test_invitations.py
-Task T071: banking/tests/test_memberships.py
-Task T087: banking/tests/test_recipient_resolution.py
-Task T095: banking/tests/test_business_requests.py
+Task: "T080 Extend banking/tests/test_employee_access.py for provisioning behavior"
+Task: "T087 Create banking/tests/test_password_reset.py for temporary password reset"
+Task: "T093 Create banking/tests/test_access_administration.py for promotion/deactivation/reactivation"
 ```
 
 ## Implementation Strategy
 
-### MVP First
+1. Inventory and remove superseded assumptions first.
+2. Build identity, models, money validation, and permission helpers before user-visible workflows.
+3. Deliver Personal registration and Business registration as the first usable vertical slices.
+4. Add Business employee governance before allowing provisioned employee normal use.
+5. Add Personal and Business financial operations with tests before history pages.
+6. Complete the Midnight Ledger UI once functional pages exist.
+7. Finish with full tests, traceability, superseded-model searches, repository hygiene, and Waitress documentation.
 
-1. Complete Phases 1-5 to establish the v2 identity, model, validation, and permission foundation.
-2. Complete Phases 6-8 to support both registration contexts.
-3. Complete Phases 10-12 to prove Business membership and governance.
-4. Complete Phases 13-20 to prove financial correctness and approvals.
-5. Complete Phases 21-25 for histories, UI polish, security, traceability, and local deployment.
+## Completion Gate
 
-### Incremental Validation
+Implementation is complete only when:
 
-- Run targeted test modules after each phase.
-- Do not proceed to dependent phases while tests for financial, membership, or permission-sensitive tasks are failing.
-- Regenerate or update traceability only after component and test paths exist.
-
-## Implementation Completion Gate
-
-The application is not complete until:
-
-- all required tests pass;
-- the superseded ownership/authorisation model has been removed or refactored;
+- all mandatory tests pass;
+- all invitation-based and multi-Business-membership behavior has been removed or replaced;
 - Personal and Business login contexts are separate and enforced;
-- Personal Accounts receive funds by unique phone number;
-- Business Accounts receive funds by unique UEN;
-- Business memberships and invitations function as specified;
+- a Business Employee Access Login is not treated as a bank account;
+- each employee login belongs to one Business Account only;
+- Personal Accounts receive transfers by unique phone number;
+- Business Accounts receive transfers by unique UEN;
+- temporary passwords and mandatory first-login password changes are implemented securely;
+- password reset, deactivation, and reactivation workflows are implemented and audited;
 - MEMBER and AUTHORISER permissions are enforced server-side;
-- multiple AUTHORISERS are supported;
-- the last AUTHORISER cannot be removed;
-- Business outgoing approvals follow the approved lifecycle;
-- financial operations are atomic;
-- three audit/history views remain distinct;
-- Midnight Ledger UI acceptance requirements are met;
-- repository secrets hygiene is verified;
-- Waitress local macOS execution is documented and verified;
-- requirement-to-implementation and requirement-to-test traceability is complete.
+- multiple AUTHORISERS are supported and the final active AUTHORISER is protected;
+- Business financial approval and retained-minimum rules are enforced;
+- completed financial transactions are atomic and auditable;
+- Transaction History, Approval History, and Access Audit History are separate;
+- Midnight Ledger UI requirements have been materially implemented and manually verified;
+- security and repository hygiene checks pass;
+- Waitress local macOS setup is documented and verified;
+- traceability mappings are complete.

@@ -264,9 +264,9 @@ The current v3.0.0 specification resolves the known blocking clarification areas
 
 No blocking requirement gaps or contradictions were identified in the current v3.0.0 specification review.
 
-Non-blocking housekeeping item:
+Housekeeping status:
 
-- `requirements-quality-v2.md` remains in the active checklist directory and should be archived before any later implementation gate evaluates active checklists.
+- `requirements-quality-v2.md` has been archived outside the active checklist directory as `../archive/requirements-quality-v2-superseded.md` before implementation gate execution.
 
 ## 6. Required Specification Corrections, If Any
 
@@ -282,6 +282,6 @@ The v3.0.0 specification defines secure password handling, temporary password no
 
 ## 9. Planning Readiness Verdict
 
-All previous checklist files based on version 1 or version 2 models must be archived outside the active checklist directory before later `/speckit.implement` execution, so they do not incorrectly block implementation.
+Previous checklist files based on version 1 or version 2 models have been archived outside the active checklist directory before later `/speckit.implement` execution, so they do not incorrectly block implementation.
 
 **Verdict**: Ready for `/speckit.plan`

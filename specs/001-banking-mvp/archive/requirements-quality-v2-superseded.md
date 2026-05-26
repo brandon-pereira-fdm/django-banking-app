@@ -1,3 +1,13 @@
+# SUPERSEDED NOTICE
+
+This checklist belongs to constitution/version 2 of the Business access model.
+It validated invitation-based employee access, Business memberships, and
+multi-Business-account membership behaviour that are no longer active under
+constitution version 3.0.0.
+
+It was superseded by `requirements-quality-v3.md` and MUST NOT be used as an
+implementation gate for constitution version 3.0.0.
+
 # Requirements-Quality Checklist: Banking MVP Constitution v2.0.0
 
 **Purpose**: Validate that the revised Banking MVP specification is complete, unambiguous, constitutionally aligned, secure, auditable, testable, and ready for regenerated implementation planning after the v2.0.0 amendment introducing separate Personal and Business login identities plus shared Business Account membership.

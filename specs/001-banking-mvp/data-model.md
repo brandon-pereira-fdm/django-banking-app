@@ -109,12 +109,16 @@ BusinessOutgoingRequest 0..1--0..1 TransferOperation
 
 ```text
 Provisioned employee: PASSWORD_CHANGE_REQUIRED -> ACTIVE
-Password reset: ACTIVE/DEACTIVATED? -> PASSWORD_CHANGE_REQUIRED after allowed reset/reactivation
+Temporary password reset: ACTIVE or PASSWORD_CHANGE_REQUIRED -> PASSWORD_CHANGE_REQUIRED
 Deactivation: ACTIVE or PASSWORD_CHANGE_REQUIRED -> DEACTIVATED
-Reactivation: DEACTIVATED -> PASSWORD_CHANGE_REQUIRED
+Reactivation with new temporary password: DEACTIVATED -> PASSWORD_CHANGE_REQUIRED
+Mandatory password change completed: PASSWORD_CHANGE_REQUIRED -> ACTIVE
 ```
 
-Reactivation requires a new temporary password. Initial Business creator starts as `ACTIVE`.
+No reset or reactivation action transitions an employee directly to `ACTIVE`.
+The employee becomes `ACTIVE` only after successfully completing mandatory
+password change. Reactivation requires issuance of a new temporary password.
+Initial Business creator starts as `ACTIVE`.
 
 ## CompletedFinancialTransaction
 
