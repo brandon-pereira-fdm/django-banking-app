@@ -1,3 +1,9 @@
+# Superseded Notice
+
+This checklist belongs to the pre-version-2.0.0 account model, where a Personal Account authorised a Business Account. It is preserved only as a historical artefact.
+
+This file must not be used as an implementation gate. It was replaced by `../checklists/requirements-quality-v2.md`.
+
 # Requirements-Quality Checklist: Banking MVP
 
 **Purpose**: Validate specification completeness, clarity, constitutional
