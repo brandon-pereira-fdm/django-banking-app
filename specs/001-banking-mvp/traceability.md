@@ -1,83 +1,56 @@
-# Traceability: Banking MVP Constitution v2.0.0
+# Traceability: Banking MVP Constitution v3.0.0
 
-This map links specification requirements to planned components and tests. Task IDs and code paths will be finalized after `/speckit.tasks` is regenerated.
+This map links v3 specification requirements to planned components and tests. Task IDs will be finalized after `/speckit.tasks` is regenerated.
 
 ## Requirement to Component and Test Map
 
 | Requirement IDs | Planned Component(s) | Planned Test Coverage |
 |---|---|---|
-| FR-001 to FR-010, BR-007 to BR-009, SEC-001 to SEC-002 | `users.models.CustomUser`, registration forms/views, context guards | TEST-001 to TEST-006, TEST-011 |
-| FR-011 to FR-019, BR-010 to BR-013 | `banking.models.PersonalAccount`, `banking.services.accounts`, Personal pages | TEST-007 to TEST-018 |
-| FR-020 to FR-026, BR-014 to BR-018 | `banking.models.BusinessAccount`, `BusinessMembership`, `CompletedFinancialTransaction`, `BusinessAccessAuditEvent`, Business registration service | TEST-002, TEST-009 to TEST-010 |
-| FR-027 to FR-048, BR-018 to BR-022, SEC-003 to SEC-006 | `BusinessMembership`, `BusinessInvitation`, `BusinessAccessAuditEvent`, membership/invitation services, member pages | TEST-037 to TEST-049, TEST-054 |
-| FR-049 to FR-056, BR-034 to BR-038 | recipient resolution service, transfer forms, `TransferOperation`, completed transaction records | TEST-019 to TEST-022 |
-| FR-057 to FR-068, BR-023 to BR-033 | `BusinessApprovalRequest`, approval services, approval pages | TEST-023 to TEST-036 |
-| FR-069 to FR-073, BR-001 to BR-006, BR-037 to BR-039, NFR-004 | money validation helper, transaction services, transfer services, transaction models | TEST-012 to TEST-022, TEST-035 to TEST-036 |
-| FR-074 to FR-080, BR-040 to BR-041 | Transaction History, Approval History, Access Audit History pages and queries | TEST-050 to TEST-054 |
-| SEC-001 to SEC-010, NFR-007 to NFR-008 | auth decorators/helpers, membership checks, CSRF-protected forms, secret settings | TEST-004 to TEST-006, TEST-041, TEST-047, TEST-049, TEST-054 |
-| UX-001 to UX-021, NFR-006 | Django templates, custom CSS, navigation shells, reusable includes | TEST-055 plus manual UI acceptance checklist in tasks |
-| NFR-001 to NFR-005 | plan/tasks governance, services, tests, traceability docs | All TEST identifiers; `/speckit.analyze` before implementation |
+| FR-001 to FR-010, BR-007 to BR-011, SEC-001 to SEC-003 | `users.CustomUser`, login context guards, auth views/forms | TEST-001 to TEST-006, TEST-011 |
+| FR-011 to FR-020, BR-012 to BR-015 | `PersonalAccount`, Personal registration service, Personal pages | TEST-007 to TEST-008, TEST-036, TEST-039 to TEST-042 |
+| FR-021 to FR-031, BR-016 to BR-020 | `BusinessAccount`, `BusinessEmployeeAccess`, opening transaction, Access Audit events | TEST-002, TEST-009 to TEST-010 |
+| FR-032 to FR-047, BR-021 to BR-027, SEC-004 to SEC-006 | `BusinessEmployeeAccess`, Team Access services/forms/views, password-change/reset services | TEST-012 to TEST-024, TEST-034 to TEST-035 |
+| FR-048 to FR-066, SEC-006 to SEC-013 | role permission helpers, Team Access admin services, deactivation/reactivation, audit | TEST-025 to TEST-033, TEST-050, TEST-061 to TEST-062, TEST-066 to TEST-067 |
+| FR-067 to FR-075, BR-039 to BR-042 | recipient resolution service, transfer forms/views, `TransferOperation` | TEST-043 to TEST-046 |
+| FR-076 to FR-086, BR-030 to BR-038 | `BusinessOutgoingRequest`, request/approval services, approval pages | TEST-047 to TEST-060 |
+| FR-087 to FR-091, BR-001 to BR-006, BR-043 to BR-044, NFR-004 | money validation, transaction services, completed transaction records | TEST-036 to TEST-046, TEST-059 to TEST-060 |
+| FR-092 to FR-097, BR-045 to BR-046 | Transaction History, Approval History, Access Audit History pages/queries | TEST-061 to TEST-067 |
+| UX-001 to UX-029, NFR-006 | Django templates, custom CSS, navigation shells, reusable UI components | TEST-068 to TEST-069 plus manual UI checks |
+| NFR-001 to NFR-009 | governance, atomicity, traceability docs, services, test suite | All TEST identifiers |
 
-## Mandatory Test Inventory
+## Planned Test Module Mapping
 
-| TEST ID | Planned Test Area |
+| Test Module | Primary Coverage |
 |---|---|
-| TEST-001 | Personal registration creates Personal-only access and one Personal Account |
-| TEST-002 | Business registration creates Business-only access, Business Account, initial AUTHORISER membership, and opening-deposit transaction |
-| TEST-003 | Duplicate email rejected across Personal and Business identities |
-| TEST-004 | Personal login denied Business pages and invitations |
-| TEST-005 | Business login denied Personal pages |
-| TEST-006 | Separate credentials required for both contexts |
-| TEST-007 | Personal starts at SGD 0.00 and requires unique phone |
-| TEST-008 | Duplicate Personal phone rejected |
-| TEST-009 | Business registration requires display name, unique UEN, and opening deposit >= SGD 7,000.00 |
-| TEST-010 | Missing/duplicate UEN and insufficient opening deposit rejected |
-| TEST-011 | Password hashing and no password exposure |
-| TEST-012 | Successful positive deposits for Personal and Business Accounts |
-| TEST-013 | MEMBER and AUTHORISER may deposit into Business Account without approval |
-| TEST-014 | Zero, negative, malformed, non-numeric, non-SGD, and excessive-precision amounts rejected |
-| TEST-015 | Personal withdrawal and full-balance withdrawal to SGD 0.00 |
-| TEST-016 | Personal negative-balance withdrawal rejected |
-| TEST-017 | Personal outgoing transfer and full-balance transfer to SGD 0.00 |
-| TEST-018 | Personal transfer that would make balance negative rejected |
-| TEST-019 | Personal recipient lookup by phone |
-| TEST-020 | Business recipient lookup by UEN |
-| TEST-021 | Unknown phone, unknown UEN, mismatch, and self-transfer rejected |
-| TEST-022 | Completed transfer creates one operation ID and two linked UUID records |
-| TEST-023 | MEMBER may submit withdrawal and transfer requests |
-| TEST-024 | AUTHORISER may submit withdrawal and transfer requests |
-| TEST-025 | PENDING requests do not move, reserve funds, or create completed records |
-| TEST-026 | MEMBER cannot approve, reject, invite, assign roles, promote, remove, or cancel another user's request |
-| TEST-027 | AUTHORISER may approve any PENDING request; one approval is sufficient |
-| TEST-028 | AUTHORISER may approve own PENDING request |
-| TEST-029 | AUTHORISER may reject any PENDING request |
-| TEST-030 | MEMBER may cancel own PENDING request only |
-| TEST-031 | AUTHORISER may cancel any PENDING request |
-| TEST-032 | No persisted APPROVED status exists |
-| TEST-033 | Terminal statuses cannot be actioned again |
-| TEST-034 | Multiple PENDING requests coexist and are independently revalidated |
-| TEST-035 | Business outgoing completion may leave exactly SGD 7,000.00 |
-| TEST-036 | Business approval fails at SGD 6,999.99 with FAILED status, no movement, and no completed records |
-| TEST-037 | AUTHORISER can invite MEMBER and AUTHORISER roles |
-| TEST-038 | Invitations grant no access before acceptance |
-| TEST-039 | Invited Business-only login can accept invitation |
-| TEST-040 | New Business-only registration from invitation can accept invitation |
-| TEST-041 | Personal-only login cannot accept Business invitation |
-| TEST-042 | Business User can belong to multiple Business Accounts |
-| TEST-043 | Removal from one Business Account preserves other memberships |
-| TEST-044 | AUTHORISER may promote MEMBER to AUTHORISER |
-| TEST-045 | AUTHORISER may remove MEMBER |
-| TEST-046 | AUTHORISER may remove another AUTHORISER only when another remains |
-| TEST-047 | Final AUTHORISER removal is rejected |
-| TEST-048 | AUTHORISER-to-MEMBER demotion is rejected |
-| TEST-049 | Removed user immediately loses access |
-| TEST-050 | Access Audit History records creation, invitations, acceptances, role assignments, promotions, and removals |
-| TEST-051 | Transaction History contains completed financial movements only |
-| TEST-052 | Approval History contains Business outgoing workflow records |
-| TEST-053 | Access Audit History is separate from Transaction History and Approval History |
-| TEST-054 | Unauthorised account, history, membership, approval, and financial operation access is denied |
-| TEST-055 | Midnight Ledger registration choice, navigation, role-aware controls, forms, confirmations, accessibility, and narrow-width usability |
+| `users/tests/test_authentication.py` | FR-002 to FR-005, TEST-003, TEST-011 |
+| `users/tests/test_access_context.py` | FR-006 to FR-010, SEC-002 to SEC-003, TEST-004 to TEST-006 |
+| `banking/tests/test_personal_registration.py` | FR-011 to FR-015, TEST-001, TEST-007 to TEST-008 |
+| `banking/tests/test_business_registration.py` | FR-021 to FR-031, TEST-002, TEST-009 to TEST-010 |
+| `banking/tests/test_employee_access.py` | FR-032 to FR-043, TEST-012 to TEST-020, TEST-034 to TEST-035 |
+| `banking/tests/test_password_workflows.py` | FR-041 to FR-047, TEST-018 to TEST-024 |
+| `banking/tests/test_team_access.py` | FR-048 to FR-066, TEST-025 to TEST-033, TEST-061 |
+| `banking/tests/test_money_validation.py` | BR-001 to BR-006, TEST-038 |
+| `banking/tests/test_deposits_withdrawals.py` | FR-016 to FR-020, FR-049, TEST-036 to TEST-040 |
+| `banking/tests/test_recipient_resolution.py` | FR-067 to FR-072, TEST-043 to TEST-045 |
+| `banking/tests/test_transfers.py` | FR-073 to FR-075, FR-087 to FR-091, TEST-041 to TEST-046 |
+| `banking/tests/test_business_requests.py` | FR-075 to FR-079, TEST-047 to TEST-049 |
+| `banking/tests/test_approvals.py` | FR-080 to FR-086, TEST-050 to TEST-057, TEST-059 to TEST-060 |
+| `banking/tests/test_multiple_pending.py` | FR-077 to FR-082, TEST-058 to TEST-060 |
+| `banking/tests/test_histories.py` | FR-092 to FR-097, TEST-061 to TEST-067 |
+| `banking/tests/test_ui_permissions.py` | UX-001 to UX-029, TEST-068 to TEST-069 |
 
 ## Superseded Traceability Notice
 
-Any previous traceability entries mapping Business approval to a linked Personal Account, an authorised Personal Account field, exactly one Business authoriser, or same-user Personal/Business transfer rejection are superseded. `/speckit.tasks` must regenerate task-level traceability from this document and the v2.0.0 plan.
+The following v2 or earlier requirements are not active and must not receive implementation tasks:
+
+- Personal Account authorises Business Account.
+- Business access through invitations or invitation acceptance.
+- One Business login has memberships in multiple Business Accounts.
+- Business Account selector for employee logins.
+- Invitation-specific registration.
+- Shared Business credentials.
+- Deleting employee access records through ordinary workflows.
+- Exactly one AUTHORISER only.
+- Persisted `APPROVED` status.
+
+These are replaced by `BusinessEmployeeAccess`, Team Access provisioning, mandatory password change, password reset, deactivation/reactivation, and Access Audit events under constitution v3.0.0.

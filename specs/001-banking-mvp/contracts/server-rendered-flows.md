@@ -1,563 +1,189 @@
-# Contracts: Server-Rendered Page Flows
+# Contracts: Server-Rendered Page and Action Flows v3.0.0
 
-These contracts describe user-facing Django page and form flows. They are not REST API contracts and do not define implementation code.
+These contracts describe user-facing Django page and form flows. They are not REST API contracts.
 
-## Shared Contract Rules
+## Shared Rules
 
 - All state-changing submissions use POST and CSRF protection.
 - Authenticated pages require login.
-- Personal pages require `PERSONAL` access context.
-- Business pages require `BUSINESS` access context plus active membership for the selected Business Account.
-- AUTHORISER-only actions must be enforced server-side.
-- Money forms display and accept SGD amounts only.
-- Confirmation pages are required before financial completion or consequential membership changes.
-- Errors must be safe, specific, and non-sensitive.
+- Personal pages require `PERSONAL` login context.
+- Business operational pages require `BUSINESS_EMPLOYEE` login context plus `ACTIVE` Business Employee Access.
+- Employees in `PASSWORD_CHANGE_REQUIRED` may access only mandatory password change and sign-out.
+- `DEACTIVATED` employees are denied Business functionality and data.
+- AUTHORISER-only actions are enforced server-side.
+- Money forms use SGD only and show `SGD 0.00` formatting.
+- Consequential financial and access-management actions use confirmation/review pages where appropriate.
+- Errors are specific but do not expose secrets, password state details, or unnecessary recipient data.
 
 ## Public and Authentication Flows
 
-### Account-Type Selection
+### Product Selection
 
-**Route family**: public onboarding.
+**Purpose**: Present separate Personal Account and Business Account registration paths.
 
-**Purpose**: Present two registration paths.
+**Content**:
 
-**Content contract**:
-
-- Personal Account: individual use, receives transfers by phone number, no opening deposit, starts at SGD 0.00.
-- Business Account: company use, receives transfers by UEN, requires SGD 7,000.00 opening funds, supports invited team access and AUTHORISER approvals.
-
-**Next states**:
-
-- Personal registration.
-- Business Account registration.
-- Sign-in.
+| Product | Identifier | Opening Requirement | Access Model |
+|---|---|---|---|
+| Personal Account | Phone number | No opening deposit | Individual Personal Login |
+| Business Account | UEN | Minimum SGD 7,000.00 | Company account with provisioned employee access |
 
 ### Personal Registration
 
-**Inputs**:
+**Inputs**: display name, unique email, password, confirmation, unique phone number.
 
-- username;
-- email;
-- password;
-- password confirmation;
-- phone number.
+**Success**: create Personal Login and Personal Account at `SGD 0.00`; redirect to Personal Dashboard.
 
-**Success**:
-
-- Create `PERSONAL` login identity.
-- Create Personal Account with SGD 0.00 balance.
-- Redirect to Personal dashboard or success page.
-
-**Failures**:
-
-- duplicate email;
-- duplicate phone number;
-- invalid password confirmation;
-- invalid required fields.
+**Failures**: duplicate email, duplicate phone, invalid password confirmation, required fields missing.
 
 ### Business Account Registration
 
-**Inputs**:
+**Inputs**: initial AUTHORISER display name, unique email, password, confirmation, business display name, UEN, opening deposit.
 
-- creator username;
-- email;
-- password;
-- password confirmation;
-- business display name;
-- UEN;
-- opening deposit.
+**Success**: create Business Account, creator `BUSINESS_EMPLOYEE` login, active AUTHORISER access, opening transaction, and initial Access Audit events; redirect to Business Dashboard.
 
-**Success**:
+**Failures**: duplicate email, missing business display name, missing/duplicate UEN, invalid amount, opening deposit below `SGD 7,000.00`, partial creation failure.
 
-- Create `BUSINESS` login identity.
-- Create Business Account.
-- Create initial AUTHORISER membership.
-- Create Business opening-deposit completed transaction.
-- Create Access Audit Events for Business Account creation and initial AUTHORISER assignment.
-- Redirect to Business dashboard.
+### Sign-In
 
-**Failures**:
+**Inputs**: email, password.
 
-- duplicate email;
-- missing display name;
-- missing or duplicate UEN;
-- invalid amount;
-- opening deposit below SGD 7,000.00;
-- partial creation failure, with no partial account or membership result.
+**Success routing**:
 
-### Sign-In and Sign-Out
+- Personal Login -> Personal Dashboard.
+- Active Business Employee -> Business Dashboard.
+- Business Employee in `PASSWORD_CHANGE_REQUIRED` -> mandatory password-change page.
+- Deactivated employee -> denied with safe message.
 
-**Inputs**:
+**Failures**: invalid credentials without identifying whether email or password was wrong.
 
-- email;
-- password.
+### Mandatory Password Change
 
-**Success**:
+**Actor**: authenticated Business employee in `PASSWORD_CHANGE_REQUIRED`.
 
-- `PERSONAL` users land on Personal dashboard.
-- `BUSINESS` users land on Business dashboard or Business Account selector.
+**Inputs**: new password, confirmation.
 
-**Failures**:
+**Success**: password changed, access status becomes `ACTIVE`, Access Audit event recorded, redirect to Business Dashboard.
 
-- invalid credentials without exposing whether email or password was wrong.
-
-## Invitation Flows
-
-### Invitation Issue
-
-**Actor**: active AUTHORISER for selected Business Account.
-
-**Inputs**:
-
-- invitee email;
-- intended role: `MEMBER` or `AUTHORISER`.
-
-**Success**:
-
-- Create PENDING invitation.
-- Record invitation-issued Access Audit Event.
-- Show invitation status and safe invitee email.
-
-**Failures**:
-
-- actor is not AUTHORISER;
-- invalid email;
-- intended role missing or invalid;
-- duplicate PENDING invitation for same Business Account and email.
-
-### Invitation Acceptance by Existing Business User
-
-**Actor**: authenticated `BUSINESS` user whose email matches invitation.
-
-**Inputs**:
-
-- invitation identifier;
-- acceptance confirmation.
-
-**Success**:
-
-- Create active Business Membership with invitation role.
-- Mark invitation ACCEPTED.
-- Record invitation acceptance and role assignment audit events.
-- Redirect to selected Business Account.
-
-**Failures**:
-
-- invitation not PENDING;
-- email does not match;
-- actor is `PERSONAL`;
-- actor already has active membership for the Business Account.
-
-### Invitation-Specific Business Registration
-
-**Actor**: unauthenticated invitee or invitee without existing login.
-
-**Inputs**:
-
-- invitation identifier;
-- username;
-- invited email, fixed or prefilled;
-- password;
-- password confirmation.
-
-**Success**:
-
-- Create `BUSINESS` login identity.
-- Accept invitation atomically.
-- Create active membership and audit events.
-
-**Failures**:
-
-- invitation invalid or not PENDING;
-- email does not match invitation;
-- email already belongs to a Personal identity;
-- duplicate active membership.
+**Failures**: mismatched/invalid password, wrong context, active/deactivated state not eligible.
 
 ## Personal Banking Flows
 
 ### Personal Dashboard and Account Detail
 
-**Actor**: `PERSONAL` user.
-
-**Displays**:
-
-- username;
-- Personal balance as `SGD 0.00`;
-- receiving phone number;
-- quick links to Deposit, Withdraw, Transfer, Transactions;
-- recent completed financial transactions.
-
-**Forbidden**:
-
-- Business navigation, approvals, members, invitations, Access Audit.
+Displays balance, receiving phone number, no-minimum-balance message, quick actions, and recent completed transactions. No Business navigation appears.
 
 ### Personal Deposit
 
-**Inputs**:
-
-- amount.
-
-**Review**:
-
-- destination Personal Account;
-- amount;
-- resulting balance preview where practical.
-
-**Success**:
-
-- Balance increases.
-- Completed `DEPOSIT` transaction with UUID is shown.
-
-**Failures**:
-
-- invalid amount;
-- unauthorised context.
+Inputs amount. Review shows account, amount, and resulting balance where practical. Success updates balance and creates completed `DEPOSIT` transaction.
 
 ### Personal Withdrawal
 
-**Inputs**:
-
-- amount.
-
-**Review**:
-
-- source account;
-- amount;
-- projected balance.
-
-**Success**:
-
-- Balance decreases and may become SGD 0.00.
-- Completed `WITHDRAWAL` transaction UUID is shown.
-
-**Failures**:
-
-- invalid amount;
-- insufficient funds;
-- unauthorised context.
+Inputs amount. Review shows projected balance. Success may leave exactly `SGD 0.00`; insufficient funds are rejected with no transaction.
 
 ### Personal Transfer
 
-**Inputs**:
+Inputs destination type, matching phone/UEN identifier, amount. Review shows safe recipient confirmation. Success completes sender debit, recipient credit, Transfer Operation, and linked transaction records atomically.
 
-- destination account type: Personal or Business;
-- phone number for Personal destination or UEN for Business destination;
-- amount.
-
-**Recipient confirmation**:
-
-- safe recipient display name or business display name;
-- account type;
-- masked or safe identifier;
-- amount;
-- completion is immediate for valid Personal outgoing transfer.
-
-**Success**:
-
-- Sender debit and recipient credit complete atomically.
-- Show transfer operation ID and sender debit transaction UUID.
-
-**Failures**:
-
-- unknown phone or UEN;
-- identifier/account-type mismatch;
-- self-transfer;
-- invalid amount;
-- insufficient funds.
-
-## Business Account Context Flow
-
-### Business Account Selector
-
-**Actor**: `BUSINESS` user.
-
-**Displays**:
-
-- active Business memberships;
-- business display name;
-- UEN;
-- current role.
-
-**Success**:
-
-- Select a Business Account context for subsequent Business pages.
-
-**Failure**:
-
-- no active memberships: show invitation/onboarding-aware empty state.
-
-## Business Financial Flows
+## Business Banking Flows
 
 ### Business Dashboard
 
-**Actor**: active MEMBER or AUTHORISER.
-
-**Displays**:
-
-- business display name;
-- UEN;
-- current balance;
-- retained-minimum reminder;
-- current user's role;
-- pending outgoing-request count;
-- quick actions allowed for role;
-- recent completed transactions;
-- recent approval activity.
+Displays business name, UEN, employee role, access state where relevant, balance, retained-minimum notice, available outgoing capacity indicator, pending approval count, recent financial activity, recent approval activity, and AUTHORISER Team Access summary where applicable.
 
 ### Business Deposit
 
 **Actor**: active MEMBER or AUTHORISER.
 
-**Inputs**:
-
-- amount.
-
-**Success**:
-
-- Balance increases immediately.
-- Completed `DEPOSIT` transaction UUID is shown.
-
-**Failures**:
-
-- invalid amount;
-- no active membership.
+**Success**: balance increases and completed `DEPOSIT` transaction is recorded. No approval request is created.
 
 ### Business Withdrawal Request
 
 **Actor**: active MEMBER or AUTHORISER.
 
-**Inputs**:
-
-- amount.
-
-**Review**:
-
-- selected Business Account;
-- amount;
-- explanation that request becomes PENDING and no balance changes until AUTHORISER approval.
-
-**Success**:
-
-- Create PENDING Business Approval Request.
-- Show request ID and PENDING status.
-
-**Failures**:
-
-- invalid amount;
-- no active membership.
+**Success**: creates `PENDING` Business outgoing request only. No balance movement or completed transaction occurs.
 
 ### Business Transfer Request
 
 **Actor**: active MEMBER or AUTHORISER.
 
-**Inputs**:
+**Inputs**: destination type, phone/UEN, amount.
 
-- destination account type;
-- phone number or UEN matching destination type;
-- amount.
+**Success**: recipient is resolved and a `PENDING` request is created only. No Transfer Operation or completed transaction exists yet.
 
-**Recipient confirmation**:
+### Approval Detail and Actions
 
-- safe recipient name;
-- recipient account type;
-- safe identifier;
-- amount;
-- approval required.
+Displays requester, requester role, request type, recipient if any, amount, current balance, projected post-approval balance, retained-minimum result, status, and permitted actions.
 
-**Success**:
+**Approve**: active AUTHORISER only; self-approval allowed; valid requests move directly `PENDING` -> `COMPLETED`; failed financial revalidation moves `PENDING` -> `FAILED` with no movement.
 
-- Create PENDING Business Approval Request.
-- No balance change and no completed transfer records.
+**Reject**: active AUTHORISER only; `PENDING` -> `REJECTED`.
 
-**Failures**:
+**Cancel**: requester MEMBER may cancel own `PENDING`; AUTHORISER may cancel any `PENDING`; result `CANCELLED`.
 
-- invalid amount;
-- unknown destination;
-- identifier mismatch;
-- self-transfer;
-- no active membership.
+## Team Access Flows
 
-## Approval and Cancellation Flows
+### Team Access Overview
 
-### Approval List
+**Actor**: active Business employee. Access-management controls are AUTHORISER-only.
 
-**Actor**: active MEMBER or AUTHORISER.
+Displays business name, UEN, current role, active employee count, active AUTHORISER count, password-change-required count, deactivated count, employee list, roles, statuses, and permitted actions. No Invitation terminology appears.
 
-**Displays**:
-
-- requests for selected Business Account;
-- filter by status;
-- requester and requester role;
-- request type;
-- amount;
-- destination where applicable;
-- status;
-- dates.
-
-**Controls**:
-
-- AUTHORISER sees approve/reject/cancel controls for PENDING requests.
-- MEMBER sees cancel control only for their own PENDING requests.
-
-### Approval Detail
-
-**Displays**:
-
-- requester;
-- requester role;
-- operation type;
-- recipient confirmation for transfers;
-- amount;
-- current balance;
-- projected post-completion balance;
-- retained-minimum compliance;
-- status history/outcome reason.
-
-### Approve Request
+### Add Employee Access
 
 **Actor**: active AUTHORISER.
 
-**Success**:
+**Inputs**: employee display name, unique email, role, temporary password, confirmation.
 
-- If current validation passes, transition PENDING to COMPLETED and complete financial movement atomically.
+**Review**: heightened confirmation when role is AUTHORISER.
 
-**Failure**:
+**Success**: creates employee login/access in `PASSWORD_CHANGE_REQUIRED`, records access-created and temporary-password-issued audit events, shows next-step instruction without persistent password retrieval.
 
-- If current financial validation fails, transition PENDING to FAILED with no balance movement and no completed financial records.
-- If actor is not AUTHORISER or request is terminal, reject action without state change except safe error display.
-
-### Reject Request
+### Promote Member
 
 **Actor**: active AUTHORISER.
 
-**Success**:
+**Success**: MEMBER becomes AUTHORISER and Access Audit event is recorded. Demotion is unsupported.
 
-- Transition PENDING to REJECTED.
-- No balance movement.
+### Reset Temporary Password
 
-### Cancel Request
+**Actor**: active AUTHORISER for another employee in same Business Account.
 
-**Actor**:
+**Inputs**: new temporary password and confirmation.
 
-- requester for own PENDING request; or
-- active AUTHORISER for any PENDING request.
+**Success**: password hash replaced, access status becomes `PASSWORD_CHANGE_REQUIRED`, audit event recorded, prior password no longer authenticates.
 
-**Success**:
-
-- Transition PENDING to CANCELLED.
-- No balance movement.
-
-## Membership Administration Flows
-
-### Member List
-
-**Actor**: active MEMBER or AUTHORISER.
-
-**Displays**:
-
-- active members;
-- roles;
-- invitation status summary;
-- role-specific management controls.
-
-**Controls**:
-
-- AUTHORISER can invite, promote MEMBER, and remove allowed memberships.
-- MEMBER sees read-only membership information or no management controls.
-
-### Promote MEMBER
+### Deactivate Access
 
 **Actor**: active AUTHORISER.
 
-**Success**:
+**Success**: eligible employee status becomes `DEACTIVATED`; access denied immediately; audit event recorded.
 
-- MEMBER becomes AUTHORISER.
-- Access Audit Event records promotion.
+**Blocked**: final active AUTHORISER deactivation, with clear message and retained audit event where recorded.
 
-**Failures**:
-
-- actor not AUTHORISER;
-- target not active MEMBER.
-
-### Remove MEMBER
+### Reactivate Access
 
 **Actor**: active AUTHORISER.
 
-**Success**:
+**Inputs**: new temporary password and confirmation.
 
-- Membership becomes inactive immediately.
-- Access Audit Event records removal.
-
-### Remove AUTHORISER
-
-**Actor**: active AUTHORISER.
-
-**Success**:
-
-- AUTHORISER membership becomes inactive only if another active AUTHORISER remains.
-- Access Audit Event records removal.
-
-**Failures**:
-
-- final AUTHORISER removal attempt is rejected;
-- retained audit event records rejected attempt where appropriate.
-
-### Demotion Attempt
-
-**Result**:
-
-- AUTHORISER-to-MEMBER demotion is unsupported and rejected.
+**Success**: status becomes `PASSWORD_CHANGE_REQUIRED`, audit events recorded, employee must change password before normal access.
 
 ## History Flows
 
 ### Transaction History
 
-**Personal access**: Personal owner only.
-
-**Business access**: active Business member only for selected Business Account.
-
-**Contains**:
-
-- completed deposits;
-- completed withdrawals;
-- transfer debits;
-- transfer credits;
-- Business opening deposits.
-
-**Excludes**:
-
-- PENDING/REJECTED/CANCELLED/FAILED approval records;
-- access audit records.
+Shows completed financial movement only: deposits, withdrawals, opening deposits, transfer debits, and transfer credits with UUID transaction IDs and transfer operation IDs where applicable.
 
 ### Approval History
 
-**Access**: active Business member only.
-
-**Contains**:
-
-- Business outgoing requests in PENDING, COMPLETED, REJECTED, CANCELLED, FAILED.
-
-**Excludes**:
-
-- access audit events;
-- unrelated financial deposits/incoming transfers unless tied to request outcome display.
+Shows Business outgoing request workflow records: requester, role, type, amount, destination, status, actioning AUTHORISER, timestamps, and safe reason text.
 
 ### Access Audit History
 
-**Access**: active Business member only.
+Shows Business access-security events: account creation, initial AUTHORISER, employee access creation, temporary password issuance/reset, password activation, promotion, deactivation, reactivation, final-AUTHORISER rejection. Passwords and hashes never appear.
 
-**Contains**:
+## Explicitly Inactive v3 Routes
 
-- Business account creation;
-- initial AUTHORISER assignment;
-- invitations issued;
-- invitations accepted;
-- roles assigned;
-- promotions;
-- removals;
-- retained invalid governance attempts such as final-AUTHORISER removal rejection.
-
-**Excludes**:
-
-- completed financial movements;
-- outgoing approval requests except where safe cross-reference is useful.
+- Invitation issue, acceptance, cancellation, and invitation-specific registration routes are inactive and must be removed/refactored.
+- Multi-Business Account selector routes are inactive and must be removed/refactored.

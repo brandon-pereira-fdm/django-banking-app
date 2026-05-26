@@ -1,163 +1,145 @@
-# Research: Banking MVP Constitution v2.0.0
+# Research: Banking MVP Constitution v3.0.0
 
-## Decision: Custom User Model With Exclusive Access Context
+## Decision: Custom User With Login Context
 
-**Decision**: Keep/use a custom Django user model with unique email login, username display name, Django password hashing, and required `access_context` choice of `PERSONAL` or `BUSINESS`.
+**Decision**: Use the existing/custom Django user model as the authenticated identity with globally unique email, display name, Django-managed password hash, and immutable MVP login context: `PERSONAL` or `BUSINESS_EMPLOYEE`.
 
-**Rationale**: Constitution v2.0.0 makes access context a core identity invariant. A custom user model from the beginning keeps email login, global email uniqueness, and Personal/Business separation explicit and testable.
-
-**Alternatives considered**:
-
-- Django default `User` plus profile model: simpler initially, but access context would be split away from authentication identity and is easier to bypass accidentally.
-- Two separate user models: Django does not support multiple active auth user models cleanly; it would increase complexity.
-
-## Decision: Separate PersonalAccount and BusinessAccount Models
-
-**Decision**: Use concrete `PersonalAccount` and `BusinessAccount` models rather than a single account table with type-specific nullable fields.
-
-**Rationale**: Personal and Business accounts now have different access rules. Personal Accounts are one-to-one with a `PERSONAL` user and receive transfers by phone. Business Accounts are company-owned shared accounts with memberships and receive transfers by UEN. Separate models make constraints and UI flows clearer for a beginner-friendly Django MVP.
+**Rationale**: Login context is a security boundary. Keeping it on the auth identity makes Personal/Business route denial direct and testable.
 
 **Alternatives considered**:
 
-- One `Account` model with account type discriminator: convenient for balances but creates many nullable fields and risks reintroducing shared ownership assumptions.
-- Generic foreign keys everywhere: flexible but harder to validate and less beginner-friendly.
+- Django default `User` plus profile: easier initially but splits the security boundary away from authentication.
+- Separate auth models: Django supports one active user model; multiple auth models would add unnecessary complexity.
 
-## Decision: Explicit Dual Account References for Money Records
+## Decision: Business Employee Access as Separate Domain Record
 
-**Decision**: Completed financial transactions and transfer operations use explicit nullable references to `PersonalAccount` and `BusinessAccount`, with validation requiring exactly one account where applicable.
+**Decision**: Represent Business employee scope, role, and access state with `BusinessEmployeeAccess`, linked one-to-one to a `BUSINESS_EMPLOYEE` user and many-to-one to a Business Account.
 
-**Rationale**: Transfers can involve either account type. Explicit fields avoid generic relations while allowing services to enforce "exactly one sender" and "exactly one recipient" rules.
-
-**Alternatives considered**:
-
-- GenericForeignKey: less transparent and harder to enforce with database constraints.
-- Reintroducing a shared base table: simpler for transactions but weaker for Personal/Business-specific invariants.
-
-## Decision: Business Membership With Soft Removal
-
-**Decision**: Model Business access through `BusinessMembership` with role `MEMBER` or `AUTHORISER`, active status, and `removed_at` timestamp rather than deleting memberships.
-
-**Rationale**: Removed users must immediately lose access, while access governance remains auditable. Filtering active memberships enforces access loss; historical rows support audit and attribution.
+**Rationale**: A Business Employee Access Login is not a bank account. Separating login identity from employee access prevents UEN/balance/role confusion and enforces exactly one Business Account per employee login.
 
 **Alternatives considered**:
 
-- Delete memberships on removal: simple but loses governance history.
-- Store only audit events and no inactive membership rows: audit remains, but permission history and duplicate-membership handling are harder.
+- Reuse v2 `BusinessMembership`: conflicts with multi-account membership removal.
+- Put role/status on `CustomUser`: loses direct Business Account relationship and weakens auditability.
 
-## Decision: Invitation Acceptance Without Email Delivery
+## Decision: One Business Account Per Employee Login
 
-**Decision**: Store `BusinessInvitation` records addressed to email with intended role. Acceptance occurs through server-rendered in-app invitation pages or invitation-specific entry links/IDs. Actual outbound email delivery is excluded.
+**Decision**: Use a unique constraint on the employee user reference in `BusinessEmployeeAccess`, so one Business employee login can have only one access record.
 
-**Rationale**: The specification requires invitation workflow but excludes email infrastructure. Stored invitations let existing Business users accept matching invites and new users register from an invite without adding external services.
-
-**Alternatives considered**:
-
-- SMTP or third-party email provider: explicitly out of MVP scope.
-- Automatically granting access on invite: violates access-begins-only-after-acceptance rule.
-
-## Decision: Duplicate Pending Invitation Rule
-
-**Decision**: Prevent multiple `PENDING` invitations for the same Business Account and invited email. Accepted or cancelled invitations remain historical and do not block a future invitation.
-
-**Rationale**: This keeps the MVP deterministic without needing expiry, reminder, or invitation deduplication UX.
+**Rationale**: Constitution v3.0.0 prohibits one employee login from accessing multiple Business Accounts and removes the Business Account selector.
 
 **Alternatives considered**:
 
-- Allow unlimited duplicates: confusing for acceptance and audit.
-- Expire old invites automatically: adds timing behavior not required by the spec.
+- Multiple access rows per user: v2 model; rejected.
+- Shared company login: prohibited and not auditable.
 
-## Decision: Invitation Expiry Excluded
+## Decision: Temporary Password Workflow
 
-**Decision**: Invitation statuses are `PENDING`, `ACCEPTED`, and `CANCELLED`; `EXPIRED` is excluded from the MVP.
+**Decision**: AUTHORISER provisioning and reset use Django password setting to hash the temporary password, then set `BusinessEmployeeAccess.access_status` to `PASSWORD_CHANGE_REQUIRED`.
 
-**Rationale**: The constitution and spec do not require expiry. Excluding it avoids scheduled cleanup, time-window messaging, and additional edge cases.
-
-**Alternatives considered**:
-
-- Add expiry: useful in production, but expands product behavior beyond the approved MVP.
-
-## Decision: Unlimited AUTHORISERS With Last-AUTHORISER Protection
-
-**Decision**: Allow any number of active AUTHORISER memberships and enforce "at least one active AUTHORISER remains" during removal.
-
-**Rationale**: Constitution v2.0.0 explicitly removes the exactly-one-authoriser model and requires last-AUTHORISER protection. A service-layer check is mandatory because SQLite constraints alone cannot easily express this cross-row invariant.
+**Rationale**: Django handles password hashing. The access record is the source of truth for whether the employee may use Business functionality.
 
 **Alternatives considered**:
 
-- Exactly one AUTHORISER: unconstitutional after v2.0.0.
-- Configurable approval thresholds: out of MVP scope.
+- Store plaintext temporary passwords for display later: prohibited.
+- Store password-change state on both user and access record: creates conflicting sources of truth.
 
-## Decision: Access Audit History as Separate Immutable Event Stream
+## Decision: Mandatory Password Change Gate
 
-**Decision**: Add `BusinessAccessAuditEvent` for account creation, initial AUTHORISER assignment, invitation issuance/acceptance, role assignment, promotion, removal, and retained invalid governance attempts.
+**Decision**: On sign-in and protected Business routes, employees in `PASSWORD_CHANGE_REQUIRED` may only access the mandatory password-change flow and sign-out.
 
-**Rationale**: Access-governance history must be distinct from financial Transaction History and outgoing-request Approval History.
-
-**Alternatives considered**:
-
-- Store access events inside Transaction History: violates history separation.
-- Only infer from membership/invitation records: loses explicit actor/outcome chronology.
-
-## Decision: Transfer Recipient Resolution by Selected Account Type
-
-**Decision**: Transfer forms require destination account type first. Personal destinations resolve by phone number; Business destinations resolve by UEN. Mismatches and unknown identifiers are rejected before money moves or a Business request is created.
-
-**Rationale**: This is required by the constitution and avoids ambiguous identifiers between Personal and Business accounts.
+**Rationale**: This enforces first-login activation server-side and keeps temporary credentials from being enough to operate company funds.
 
 **Alternatives considered**:
 
-- Try both phone and UEN automatically: weaker confirmation model and conflicts with explicit recipient type selection.
+- UI-only warning: insecure and bypassable.
+- Allow read-only dashboard before change: contradicts v3 requirements.
+
+## Decision: Deactivation/Reactivation Instead of Deletion
+
+**Decision**: Deactivation changes access status to `DEACTIVATED` and records audit metadata. Reactivation requires a new temporary password and returns status to `PASSWORD_CHANGE_REQUIRED`.
+
+**Rationale**: Employee actions must remain attributable. Deleting access would weaken audit history and relationship integrity.
+
+**Alternatives considered**:
+
+- Hard delete employee access: rejected for auditability.
+- Reactivate directly to `ACTIVE`: rejected because v3 requires a new temporary password and private password change.
+
+## Decision: Final Active AUTHORISER Protection in Service Layer
+
+**Decision**: Enforce "at least one active AUTHORISER remains" in employee deactivation services, inside a transaction and immediately before state change.
+
+**Rationale**: SQLite cannot reliably express this cross-row invariant with a simple constraint. Service enforcement is explicit and testable.
+
+**Alternatives considered**:
+
+- Database trigger: more complex and less beginner-friendly.
+- Exactly one AUTHORISER: unconstitutional after v3 and v2.
+
+## Decision: Remove Invitation Flow
+
+**Decision**: Treat invitation models, forms, services, pages, tests, navigation, and invitation audit events as superseded and replace them with Team Access provisioning.
+
+**Rationale**: Constitution v3.0.0 states invitations are not part of the MVP. Employees are provisioned directly and do not accept invitations.
+
+**Alternatives considered**:
+
+- Keep invitation code hidden: risky, could remain reachable or confuse tasks.
+- Rename invitation to provisioning: misleading because semantics differ.
+
+## Decision: Explicit Account References for Financial Records
+
+**Decision**: Use explicit nullable PersonalAccount and BusinessAccount references in completed transactions and transfer operations, with model/service validation requiring exactly one account per side.
+
+**Rationale**: The MVP has only two account types. Explicit references are beginner-friendly and avoid generic relation complexity.
+
+**Alternatives considered**:
+
+- GenericForeignKey: harder to constrain and test.
+- Single shared account table: risks reintroducing old account-type ambiguity.
 
 ## Decision: Decimal Money Handling
 
-**Decision**: Use Python `Decimal`, Django `DecimalField(max_digits=12, decimal_places=2)`, and a single money validation helper.
+**Decision**: Use Python `Decimal`, `DecimalField(max_digits=12, decimal_places=2)`, and one shared money parser/formatter.
 
-**Rationale**: Decimal avoids floating-point error and a shared helper prevents inconsistent validation across deposits, withdrawals, transfers, opening deposits, and approval revalidation.
-
-**Alternatives considered**:
-
-- Float: unconstitutional for money.
-- Store cents as integers: valid, but Django `DecimalField` is more readable for a beginner MVP and matches form validation needs.
-
-## Decision: Service Layer for Financial and Membership Rules
-
-**Decision**: Implement domain services in `banking/services/` for money validation, account creation, invitations, memberships, transfers, and approvals.
-
-**Rationale**: The spec requires server-side enforcement. Keeping rules out of views/forms improves traceability and makes atomicity/test coverage clearer.
+**Rationale**: Decimal correctness and consistent validation are central to the constitution.
 
 **Alternatives considered**:
 
-- Put logic in forms/views: too easy to bypass and hard to test consistently.
-- Heavy domain framework or repository layer: unnecessary for MVP.
+- Float: rejected for financial correctness.
+- Integer cents: valid, but less aligned with Django form/model readability for this beginner MVP.
 
-## Decision: SQLite Atomicity Boundaries
+## Decision: SQLite Local MVP Boundaries
 
-**Decision**: Use Django `transaction.atomic()` around multi-row state changes and re-read balances/memberships before final financial or governance completion.
+**Decision**: Use Django `transaction.atomic()` for multi-row operations and document SQLite as local-only, not production banking concurrency infrastructure.
 
-**Rationale**: SQLite supports local transactional correctness for the MVP. Revalidation at completion time is required for multiple PENDING Business requests and last-AUTHORISER protection.
-
-**Alternatives considered**:
-
-- PostgreSQL or row-level locking: more production-ready but outside approved MVP stack.
-- No transaction boundaries: risks partial balances, records, or audit state.
-
-## Decision: Server-Rendered Midnight Ledger UI With Custom CSS
-
-**Decision**: Use Django templates, reusable includes, and custom CSS for the Midnight Ledger interface. No frontend framework or external CSS framework.
-
-**Rationale**: The approved stack is server-rendered Django. The premium UI can be achieved with custom CSS, template inheritance, and server-rendered confirmation flows.
+**Rationale**: SQLite is constitutionally approved and sufficient for local learning. Revalidation at completion time handles MVP multiple-PENDING behavior.
 
 **Alternatives considered**:
 
-- React/Vue/Angular, Bootstrap, Tailwind: explicitly outside MVP scope.
-- JavaScript-required form steps: not allowed for core flows.
+- PostgreSQL or row-level locks: outside approved MVP stack.
+- No transactions: unacceptable for financial and access-governance atomicity.
 
-## Decision: Superseded Implementation Reset Strategy
+## Decision: Server-Rendered Midnight Ledger Redesign
 
-**Decision**: For local MVP development, regenerate tasks for v2.0.0 and replace superseded migrations/schema assumptions. Reset the local SQLite development database before continuing implementation unless a separate preservation requirement is introduced.
+**Decision**: Use Django templates, reusable includes, and custom CSS to implement a substantially redesigned Midnight Ledger interface.
 
-**Rationale**: The v2 amendment changes user/account ownership, Business Account authorisation, memberships, and audit history fundamentally. A local reset is simpler, safer, and consistent with the learning MVP context.
+**Rationale**: The stack prohibits frontend frameworks and external CSS frameworks, but custom CSS and server-rendered pages can meet the premium UI requirements.
 
 **Alternatives considered**:
 
-- Forward migrations from the superseded schema: possible, but not worth the complexity unless preserving local development data becomes a requirement.
+- React/Vue/HTMX: outside scope.
+- Bootstrap/Tailwind: outside scope.
+- Functional-only CRUD UI: rejected by v3 UX requirements.
+
+## Decision: Superseded Migration/Data Strategy
+
+**Decision**: Because this is a local learning MVP with no approved preservation requirement, prefer resetting local SQLite data and replacing superseded development migrations with fresh v3 migrations during implementation.
+
+**Rationale**: The v3 model removes invitations and multi-memberships and changes employee access semantics enough that local preservation is more complex than useful.
+
+**Alternatives considered**:
+
+- Forward migration: only needed if committed migration history must be preserved by later repository policy.
+- Preserve local data: no requirement exists and would retain obsolete semantics.

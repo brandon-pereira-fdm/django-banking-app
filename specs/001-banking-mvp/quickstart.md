@@ -1,6 +1,6 @@
-# Quickstart: Banking MVP Constitution v2.0.0
+# Quickstart: Banking MVP Constitution v3.0.0
 
-This is a local learning MVP. It is not suitable for real banking, real money movement, public hosting, or production use.
+This is a local learning MVP. It is not suitable for real banking, real money movement, public hosting, production compliance, or customer data.
 
 ## Prerequisites
 
@@ -22,10 +22,9 @@ The approved MVP dependencies are Django and Waitress.
 
 ```bash
 pip install Django waitress
-pip freeze > requirements.txt
 ```
 
-If `requirements.txt` already exists after implementation, use:
+If `requirements.txt` exists after implementation:
 
 ```bash
 pip install -r requirements.txt
@@ -33,39 +32,31 @@ pip install -r requirements.txt
 
 ## Configure Environment
 
-Set a local Django secret key through an environment variable.
-
 ```bash
 export DJANGO_SECRET_KEY="replace-with-a-local-development-secret"
 export DJANGO_DEBUG="1"
 ```
 
-Do not commit `.env`, local secret files, or real credentials. The project `.gitignore` should exclude local secrets, virtual environments, Python caches, SQLite database files, and local generated assets.
+Do not commit `.env`, local secret files, real credentials, temporary passwords, local SQLite databases, virtual environments, Python caches, or collected generated assets.
 
-## Database Setup
+## Superseded v2 Implementation Reset Guidance
 
-After implementation creates the Django project and migrations:
+Constitution v3.0.0 supersedes invitation acceptance, multi-Business memberships, Business Account selectors, and invitation-specific registration. The preferred local MVP implementation path is:
+
+1. Confirm no local development data requires preservation.
+2. Archive or remove active v2 checklist gates before implementation gate scanning.
+3. Remove/reset the local SQLite database when implementation tasks explicitly reach the migration/reset step.
+4. Replace superseded uncommitted development migrations where safe.
+5. Generate fresh v3 migrations during implementation.
+6. Recreate sample data through tests or documented setup only.
+
+Do not execute database reset or migration generation during planning.
+
+## Database Setup After v3 Implementation
 
 ```bash
 python3 manage.py migrate
 ```
-
-## Superseded Development Model Reset Guidance
-
-Constitution v2.0.0 replaces the earlier Personal-Account-authorises-Business-Account design. If a local SQLite database or old migrations were created from the superseded model during development, the recommended local MVP path is:
-
-1. Ensure no valuable local-only data needs preservation.
-2. Remove the old local SQLite database file.
-3. Regenerate/apply the v2.0.0 migrations.
-
-Example after implementation, if the database file is `db.sqlite3`:
-
-```bash
-rm db.sqlite3
-python3 manage.py migrate
-```
-
-Do not use this reset guidance for any real or production data. This MVP is local-only.
 
 ## Run Tests
 
@@ -73,15 +64,20 @@ Do not use this reset guidance for any real or production data. This MVP is loca
 python3 manage.py test
 ```
 
-The test suite must cover separate Personal and Business identities, memberships, invitations, money validation, transfer records, approval workflow, Access Audit History, and access control.
+The suite must cover Personal and Business login-context isolation, provisioned employee access, mandatory password change, password reset, deactivation/reactivation, final AUTHORISER protection, money validation, transfers, Business approvals, histories, security, and Midnight Ledger UI flows.
 
-## Create Test Users
+## Manual MVP Flow After Implementation
 
-Use normal registration flows in the browser:
+1. Open the product selection page.
+2. Register a Personal Account and verify balance `SGD 0.00` plus phone recipient identifier.
+3. Register a Business Account with opening deposit `SGD 7,000.00` or more.
+4. Sign in as the initial AUTHORISER and open Team Access.
+5. Add MEMBER employee access with a temporary password.
+6. Sign in as the employee and verify mandatory password change blocks normal Business pages.
+7. Change password and verify MEMBER access.
+8. Test Business deposit, outgoing request submission, AUTHORISER approval/rejection/cancellation, and histories.
 
-- Open a Personal Account for Personal-only access.
-- Open a Business Account for Business-only access and initial AUTHORISER membership.
-- Use Business invitation flows to add additional Business Users.
+No invitation or multi-Business Account selector flow should appear.
 
 ## Static Files
 
@@ -105,18 +101,12 @@ http://127.0.0.1:8000/
 
 ## Run Locally With Waitress
 
-After implementation provides a WSGI app and optional Waitress entry point:
-
 ```bash
 waitress-serve --listen=127.0.0.1:8000 bankapp.wsgi:application
 ```
 
-Open:
-
-```text
-http://127.0.0.1:8000/
-```
+If implementation provides `bankapp/waitress_server.py`, an equivalent local command may be documented there.
 
 ## Local MVP Disclaimer
 
-This application is a training/local MVP. It does not integrate with banks, payment networks, external identity providers, real email delivery, government UEN registries, OTP systems, fraud controls, or production-grade financial infrastructure. Do not use it for real funds or public production banking.
+This application is for local learning only. It does not integrate with banks, payment networks, identity providers, email delivery, government UEN registries, OTP systems, fraud controls, or production infrastructure. Do not use it for real funds or public banking.
