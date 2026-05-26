@@ -30,10 +30,18 @@ class EmailAuthenticationForm(forms.Form):
 
 
 class BaseAccessRegistrationForm(UserCreationForm):
+    access_context_value = None
+
     class Meta:
         model = get_user_model()
         fields = ("email", "username", "password1", "password2")
         labels = {"email": "Email address", "username": "Username"}
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.access_context_value:
+            self.instance.access_context = self.access_context_value
+        return cleaned_data
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -41,8 +49,17 @@ class BaseAccessRegistrationForm(UserCreationForm):
             raise forms.ValidationError("An account with this email address already exists.")
         return email
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if self.access_context_value:
+            user.access_context = self.access_context_value
+        if commit:
+            user.save()
+        return user
+
 
 class PersonalRegistrationForm(BaseAccessRegistrationForm):
+    access_context_value = "PERSONAL"
     phone_number = forms.CharField(label="Receiving phone number", max_length=32)
 
     class Meta(BaseAccessRegistrationForm.Meta):
@@ -58,6 +75,7 @@ class PersonalRegistrationForm(BaseAccessRegistrationForm):
 
 
 class BusinessRegistrationForm(BaseAccessRegistrationForm):
+    access_context_value = "BUSINESS"
     business_display_name = forms.CharField(label="Business display name", max_length=160)
     uen = forms.CharField(label="UEN", max_length=32)
     opening_deposit = forms.DecimalField(label="Opening deposit", max_digits=12, decimal_places=2)
@@ -75,6 +93,8 @@ class BusinessRegistrationForm(BaseAccessRegistrationForm):
 
 
 class InvitedBusinessRegistrationForm(BaseAccessRegistrationForm):
+    access_context_value = "BUSINESS"
+
     def __init__(self, *args, invitation=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.invitation = invitation
