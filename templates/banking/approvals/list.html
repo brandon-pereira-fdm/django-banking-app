@@ -1,0 +1,12 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Approvals</h1>
+{% for approval in approvals %}
+  <article class="card">
+    <h2>{{ approval.request_type }}</h2>
+    <p>{{ approval.amount|sgd }} <span class="badge {{ approval.status|lower }}">{{ approval.status }}</span></p>
+    <a href="{% url 'approvals_detail' account.account_id approval.request_id %}">Review</a>
+  </article>
+{% empty %}<p>No approval requests.</p>{% endfor %}
+{% endblock %}

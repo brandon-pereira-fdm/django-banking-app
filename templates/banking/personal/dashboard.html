@@ -1,0 +1,14 @@
+{% extends "base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Personal Dashboard</h1>
+<section class="card">
+  <h2>Personal Account</h2>
+  <p>Balance: <strong>{{ account.balance|sgd }}</strong></p>
+  <p>Receiving phone number: {{ account.phone_number }}</p>
+</section>
+<section class="card">
+  <h2>Recent Transactions</h2>
+  {% for transaction in transactions %}<p>{{ transaction.transaction_type }} {{ transaction.amount|sgd }} {{ transaction.transaction_id }}</p>{% empty %}<p>No completed financial movements yet.</p>{% endfor %}
+</section>
+{% endblock %}

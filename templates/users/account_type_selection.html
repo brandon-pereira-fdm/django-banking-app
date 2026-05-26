@@ -1,0 +1,22 @@
+{% extends "base_public.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Midnight Ledger</h1>
+  <p>Choose the banking access that matches how you will use this local MVP.</p>
+</section>
+<section class="choice-grid">
+  <article class="card">
+    <h2>Personal Account</h2>
+    <p>Individual banking that receives transfers by phone number.</p>
+    <p>Starts at SGD 0.00 with no opening deposit and no minimum balance.</p>
+    <a class="button" href="{% url 'register_personal' %}">Create Personal Account</a>
+  </article>
+  <article class="card">
+    <h2>Business Account</h2>
+    <p>Company banking that receives transfers by UEN.</p>
+    <p>Requires at least SGD 7,000.00 opening funds, supports invited Business users, and outgoing transactions require AUTHORISER approval.</p>
+    <a class="button" href="{% url 'register_business' %}">Create Business Account</a>
+  </article>
+</section>
+<p><a href="{% url 'login' %}">Sign in</a></p>
+{% endblock %}

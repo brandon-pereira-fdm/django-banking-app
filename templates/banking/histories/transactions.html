@@ -1,0 +1,14 @@
+{% extends account|yesno:"base_business.html,base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>{{ scope }} Transaction History</h1>
+<p>Completed financial movements only.</p>
+{% for transaction in transactions %}
+  <article class="card">
+    <h2>{{ transaction.transaction_type }}</h2>
+    <p>{{ transaction.amount|sgd }}</p>
+    <p>Transaction ID: {{ transaction.transaction_id }}</p>
+    {% if transaction.transfer_operation %}<p>Transfer Operation ID: {{ transaction.transfer_operation.transfer_operation_id }}</p>{% endif %}
+  </article>
+{% empty %}<p>No completed financial movements.</p>{% endfor %}
+{% endblock %}

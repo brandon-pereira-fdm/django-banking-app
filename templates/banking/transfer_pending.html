@@ -1,7 +1,0 @@
-{% extends "base.html" %}
-{% load banking_extras %}
-{% block content %}
-<h1>Transfer PENDING</h1>
-<p>{{ approval.amount|sgd }} is awaiting authorised approval. No funds are reserved or moved.</p>
-<p>Request ID: {{ approval.request_id }}</p>
-{% endblock %}

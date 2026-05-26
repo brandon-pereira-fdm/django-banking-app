@@ -47,7 +47,7 @@ Do not commit `.env`, local secret files, or real credentials. The project `.git
 After implementation creates the Django project and migrations:
 
 ```bash
-python manage.py migrate
+python3 manage.py migrate
 ```
 
 ## Superseded Development Model Reset Guidance
@@ -62,7 +62,7 @@ Example after implementation, if the database file is `db.sqlite3`:
 
 ```bash
 rm db.sqlite3
-python manage.py migrate
+python3 manage.py migrate
 ```
 
 Do not use this reset guidance for any real or production data. This MVP is local-only.
@@ -70,7 +70,7 @@ Do not use this reset guidance for any real or production data. This MVP is loca
 ## Run Tests
 
 ```bash
-python manage.py test
+python3 manage.py test
 ```
 
 The test suite must cover separate Personal and Business identities, memberships, invitations, money validation, transfer records, approval workflow, Access Audit History, and access control.
@@ -88,13 +88,13 @@ Use normal registration flows in the browser:
 For local Django development, static files can be served by Django when debug mode is enabled. For Waitress-style local execution, collect static files if implementation config requires it:
 
 ```bash
-python manage.py collectstatic
+python3 manage.py collectstatic
 ```
 
 ## Run Locally With Django Development Server
 
 ```bash
-python manage.py runserver
+python3 manage.py runserver
 ```
 
 Open:

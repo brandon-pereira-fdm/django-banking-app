@@ -1,7 +1,0 @@
-{% extends "base.html" %}
-{% load banking_extras %}
-{% block content %}
-<h1>Confirm Withdrawal</h1><p>{% if account.account_type == "BUSINESS" %}This Business withdrawal will be submitted for approval and will not immediately change balance.{% else %}This withdrawal will complete immediately if funds remain non-negative.{% endif %}</p>
-<section class="summary"><p><span>Source</span><strong>{{ account }}</strong></p><p><span>Amount</span><strong>{{ amount|sgd }}</strong></p></section>
-<form method="post">{% csrf_token %}<input type="hidden" name="account" value="{{ account.pk }}"><input type="hidden" name="amount" value="{{ amount }}"><button class="button" name="confirm" value="1" type="submit">Confirm</button></form>
-{% endblock %}

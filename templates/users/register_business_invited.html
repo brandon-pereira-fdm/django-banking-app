@@ -1,0 +1,12 @@
+{% extends "base_public.html" %}
+{% block content %}
+<section class="card narrow">
+  <h1>Accept Business Invitation</h1>
+  <p>{{ invitation.business_account.business_display_name }} invited {{ invitation.invited_email }} as {{ invitation.intended_role }}.</p>
+  <form method="post">{% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Create Business Login and Accept</button>
+  </form>
+</section>
+{% endblock %}

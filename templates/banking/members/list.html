@@ -1,0 +1,16 @@
+{% extends "base_business.html" %}
+{% block content %}
+<h1>Members</h1>
+{% for item in memberships %}
+  <article class="card">
+    <h2>{{ item.user.username }}</h2>
+    <p>{{ item.user.email }} <span class="badge">{{ item.role }}</span></p>
+    {% if membership.role == "AUTHORISER" and item.membership_id != membership.membership_id %}
+      {% if item.role == "MEMBER" %}
+        <form method="post" action="{% url 'member_action' account.account_id item.membership_id 'promote' %}">{% csrf_token %}<button class="button" type="submit">Promote</button></form>
+      {% endif %}
+      <form method="post" action="{% url 'member_action' account.account_id item.membership_id 'remove' %}">{% csrf_token %}<button class="button secondary" type="submit">Remove</button></form>
+    {% endif %}
+  </article>
+{% empty %}<p>No active members.</p>{% endfor %}
+{% endblock %}

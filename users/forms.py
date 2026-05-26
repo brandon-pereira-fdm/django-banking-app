@@ -1,24 +1,9 @@
 from django import forms
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import CustomUser
-
-
-class RegistrationForm(UserCreationForm):
-    class Meta:
-        model = CustomUser
-        fields = ("email", "username", "password1", "password2")
-        labels = {
-            "email": "Email address",
-            "username": "Username",
-        }
-
-    def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
-        if CustomUser.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError("An account with this email address already exists.")
-        return email
+from banking.models import BusinessAccount, BusinessInvitation, PersonalAccount
+from banking.services.money import normalize_phone, normalize_uen
 
 
 class EmailAuthenticationForm(forms.Form):
@@ -42,3 +27,65 @@ class EmailAuthenticationForm(forms.Form):
 
     def get_user(self):
         return self.user_cache
+
+
+class BaseAccessRegistrationForm(UserCreationForm):
+    class Meta:
+        model = get_user_model()
+        fields = ("email", "username", "password1", "password2")
+        labels = {"email": "Email address", "username": "Username"}
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email address already exists.")
+        return email
+
+
+class PersonalRegistrationForm(BaseAccessRegistrationForm):
+    phone_number = forms.CharField(label="Receiving phone number", max_length=32)
+
+    class Meta(BaseAccessRegistrationForm.Meta):
+        fields = BaseAccessRegistrationForm.Meta.fields + ("phone_number",)
+
+    def clean_phone_number(self):
+        phone = normalize_phone(self.cleaned_data["phone_number"])
+        if not phone:
+            raise forms.ValidationError("A receiving phone number is required.")
+        if PersonalAccount.objects.filter(phone_number=phone).exists():
+            raise forms.ValidationError("This receiving phone number is already registered.")
+        return phone
+
+
+class BusinessRegistrationForm(BaseAccessRegistrationForm):
+    business_display_name = forms.CharField(label="Business display name", max_length=160)
+    uen = forms.CharField(label="UEN", max_length=32)
+    opening_deposit = forms.DecimalField(label="Opening deposit", max_digits=12, decimal_places=2)
+
+    class Meta(BaseAccessRegistrationForm.Meta):
+        fields = BaseAccessRegistrationForm.Meta.fields + ("business_display_name", "uen", "opening_deposit")
+
+    def clean_uen(self):
+        uen = normalize_uen(self.cleaned_data["uen"])
+        if not uen:
+            raise forms.ValidationError("A UEN is required.")
+        if BusinessAccount.objects.filter(uen=uen).exists():
+            raise forms.ValidationError("This UEN is already registered.")
+        return uen
+
+
+class InvitedBusinessRegistrationForm(BaseAccessRegistrationForm):
+    def __init__(self, *args, invitation=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.invitation = invitation
+        if invitation:
+            self.fields["email"].initial = invitation.invited_email
+            self.fields["email"].disabled = True
+
+    def clean_email(self):
+        if self.invitation:
+            email = self.invitation.invited_email.lower()
+            if get_user_model().objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("An account with this invitation email already exists. Sign in to accept it.")
+            return email
+        return super().clean_email()

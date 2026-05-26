@@ -1,0 +1,12 @@
+{% extends "base_public.html" %}
+{% block content %}
+<section class="card narrow">
+  <h1>Create Business Account</h1>
+  <p>Receive funds by UEN. Opening funding must be at least SGD 7,000.00.</p>
+  <form method="post">{% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Create Business Account</button>
+  </form>
+</section>
+{% endblock %}

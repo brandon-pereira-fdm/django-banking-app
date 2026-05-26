@@ -1,6 +1,0 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="page-header"><h1>Withdraw</h1><p>Personal withdrawals complete after confirmation. Business withdrawals are sent for approval.</p></section>
-{% include "components/field_errors.html" %}
-<form method="post" class="form-card">{% csrf_token %}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endfor %}<button class="button" type="submit">Review Withdrawal</button></form>
-{% endblock %}

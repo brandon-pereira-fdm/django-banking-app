@@ -1,15 +1,11 @@
-{% extends "public_base.html" %}
+{% extends "base_public.html" %}
 {% block content %}
-<h2>Sign in</h2>
-<p class="muted">Access your SGD accounts and approvals.</p>
-{% include "components/field_errors.html" %}
-<form method="post" class="form-card">
-  {% csrf_token %}
-  {% for field in form %}
-    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-  {% endfor %}
-  <button type="submit" class="button">Sign in</button>
-</form>
-<p class="switch-link">New here? <a href="{% url 'register' %}">Create an account</a></p>
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <form method="post">{% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Sign in</button>
+  </form>
+</section>
 {% endblock %}

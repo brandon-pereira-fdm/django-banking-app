@@ -1,0 +1,14 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Approval History</h1>
+<p>Business outgoing request workflow records only.</p>
+{% for approval in approvals %}
+  <article class="card">
+    <h2>{{ approval.request_type }}</h2>
+    <p>{{ approval.amount|sgd }} <span class="badge {{ approval.status|lower }}">{{ approval.status }}</span></p>
+    <p>Requester: {{ approval.requested_by.email }}</p>
+    {% if approval.actioned_by %}<p>Actioned by: {{ approval.actioned_by.email }}</p>{% endif %}
+  </article>
+{% empty %}<p>No approval workflow records.</p>{% endfor %}
+{% endblock %}

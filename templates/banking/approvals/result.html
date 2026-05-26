@@ -1,0 +1,11 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="card">
+  <h1>{{ title }}</h1>
+  <p>Request ID: {{ approval.request_id }}</p>
+  <p>Status: <span class="badge pending">{{ approval.status }}</span></p>
+  <p>Amount: {{ approval.amount|sgd }}</p>
+  <p>No funds are reserved or moved while this request is Pending.</p>
+</section>
+{% endblock %}

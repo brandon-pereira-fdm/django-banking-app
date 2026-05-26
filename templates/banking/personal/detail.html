@@ -1,0 +1,10 @@
+{% extends "base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<h1>Personal Account</h1>
+<section class="card">
+  <p>Account ID: {{ account.account_id }}</p>
+  <p>Balance: {{ account.balance|sgd }}</p>
+  <p>Receives transfers by phone number: {{ account.phone_number }}</p>
+</section>
+{% endblock %}

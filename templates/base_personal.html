@@ -1,0 +1,29 @@
+{% load banking_extras %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Personal | Midnight Ledger{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/midnight-ledger.css">
+</head>
+<body class="app-shell">
+  <aside class="sidebar" aria-label="Personal navigation">
+    <a class="brand" href="{% url 'personal_dashboard' %}">Midnight Ledger</a>
+    <nav>
+      <a href="{% url 'personal_dashboard' %}">Dashboard</a>
+      <a href="{% url 'personal_account_detail' %}">Personal Account</a>
+      <a href="{% url 'personal_deposit' %}">Deposit</a>
+      <a href="{% url 'personal_withdraw' %}">Withdraw</a>
+      <a href="{% url 'personal_transfer' %}">Transfer</a>
+      <a href="{% url 'personal_transactions' %}">Transactions</a>
+      <a href="{% url 'logout' %}">Sign Out</a>
+    </nav>
+  </aside>
+  <main class="content">
+    <header class="topbar"><span>{{ request.user.username }}</span><span class="badge">PERSONAL</span></header>
+    {% include "includes/messages.html" %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

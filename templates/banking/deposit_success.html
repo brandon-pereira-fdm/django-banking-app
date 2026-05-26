@@ -1,5 +1,0 @@
-{% extends "base.html" %}
-{% load banking_extras %}
-{% block content %}
-<h1>Deposit Completed</h1><p>{{ transaction.amount|sgd }} credited.</p><p>Transaction ID: {{ transaction.transaction_id }}</p>
-{% endblock %}

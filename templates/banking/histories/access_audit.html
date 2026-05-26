@@ -1,0 +1,13 @@
+{% extends "base_business.html" %}
+{% block content %}
+<h1>Access Audit History</h1>
+<p>Invitations and membership governance only.</p>
+{% for event in events %}
+  <article class="card">
+    <h2>{{ event.event_type }}</h2>
+    <p>Outcome: <span class="badge">{{ event.outcome }}</span></p>
+    {% if event.affected_user %}<p>Affected user: {{ event.affected_user.email }}</p>{% endif %}
+    {% if event.invited_email %}<p>Invited email: {{ event.invited_email }}</p>{% endif %}
+  </article>
+{% empty %}<p>No access audit events.</p>{% endfor %}
+{% endblock %}

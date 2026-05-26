@@ -1,0 +1,16 @@
+{% extends "base_business.html" %}
+{% block content %}
+<h1>Choose Business Account</h1>
+<section class="grid">
+  {% for item in memberships %}
+    <article class="card">
+      <h2>{{ item.business_account.business_display_name }}</h2>
+      <p>Role: {{ item.role }}</p>
+      <p>UEN: {{ item.business_account.uen }}</p>
+      <a class="button" href="{% url 'business_dashboard' item.business_account.account_id %}">Open</a>
+    </article>
+  {% empty %}
+    <p>No active Business memberships.</p>
+  {% endfor %}
+</section>
+{% endblock %}

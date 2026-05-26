@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% load banking_extras %}
-{% block content %}
-<h1>Transfer Completed</h1>
-<p>{{ debit.amount|sgd }} sent to {{ preview.recipient_label }}.</p>
-<p>Status: COMPLETED</p>
-<p>Transfer operation ID: {{ operation.transfer_operation_id }}</p>
-<p>Sender debit transaction ID: {{ debit.transaction_id }}</p>
-{% endblock %}

@@ -12,6 +12,7 @@ build/
 *.egg-info/
 .env
 .env.*
+!.env.example
 local_settings.py
 secrets.*
 db.sqlite3
