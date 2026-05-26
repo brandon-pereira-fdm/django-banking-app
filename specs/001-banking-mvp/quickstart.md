@@ -1,13 +1,12 @@
-# Quickstart: Banking MVP
+# Quickstart: Banking MVP Constitution v2.0.0
 
-This quickstart describes local macOS setup for the planned server-rendered
-Django MVP. It is not production deployment guidance.
+This is a local learning MVP. It is not suitable for real banking, real money movement, public hosting, or production use.
 
 ## Prerequisites
 
-- Python 3.11 or later.
-- Git.
-- macOS terminal.
+- macOS
+- Python 3.11 or later
+- Git
 
 ## Create a Virtual Environment
 
@@ -17,34 +16,56 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-## Install Minimal Dependencies
+## Install Dependencies
+
+The approved MVP dependencies are Django and Waitress.
+
+```bash
+pip install Django waitress
+pip freeze > requirements.txt
+```
+
+If `requirements.txt` already exists after implementation, use:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-No frontend framework, REST framework, CSS framework, payment SDK, queue, cloud
-SDK, external auth SDK, or alternate database driver is required for the MVP.
+## Configure Environment
 
-## Environment Variables
-
-Set local environment variables before running Django:
+Set a local Django secret key through an environment variable.
 
 ```bash
-export DJANGO_SECRET_KEY='replace-with-local-development-secret'
-export DJANGO_DEBUG='1'
-export DJANGO_ALLOWED_HOSTS='127.0.0.1,localhost'
+export DJANGO_SECRET_KEY="replace-with-a-local-development-secret"
+export DJANGO_DEBUG="1"
 ```
 
-Do not commit `.env`, local secret files, or generated SQLite database files.
+Do not commit `.env`, local secret files, or real credentials. The project `.gitignore` should exclude local secrets, virtual environments, Python caches, SQLite database files, and local generated assets.
 
 ## Database Setup
 
-The MVP uses local SQLite:
+After implementation creates the Django project and migrations:
 
 ```bash
 python manage.py migrate
 ```
+
+## Superseded Development Model Reset Guidance
+
+Constitution v2.0.0 replaces the earlier Personal-Account-authorises-Business-Account design. If a local SQLite database or old migrations were created from the superseded model during development, the recommended local MVP path is:
+
+1. Ensure no valuable local-only data needs preservation.
+2. Remove the old local SQLite database file.
+3. Regenerate/apply the v2.0.0 migrations.
+
+Example after implementation, if the database file is `db.sqlite3`:
+
+```bash
+rm db.sqlite3
+python manage.py migrate
+```
+
+Do not use this reset guidance for any real or production data. This MVP is local-only.
 
 ## Run Tests
 
@@ -52,10 +73,25 @@ python manage.py migrate
 python manage.py test
 ```
 
-The test suite must cover the mandatory `TEST-###` cases from the
-specification before the feature is treated as complete.
+The test suite must cover separate Personal and Business identities, memberships, invitations, money validation, transfer records, approval workflow, Access Audit History, and access control.
 
-## Run Locally With Django During Development
+## Create Test Users
+
+Use normal registration flows in the browser:
+
+- Open a Personal Account for Personal-only access.
+- Open a Business Account for Business-only access and initial AUTHORISER membership.
+- Use Business invitation flows to add additional Business Users.
+
+## Static Files
+
+For local Django development, static files can be served by Django when debug mode is enabled. For Waitress-style local execution, collect static files if implementation config requires it:
+
+```bash
+python manage.py collectstatic
+```
+
+## Run Locally With Django Development Server
 
 ```bash
 python manage.py runserver
@@ -69,11 +105,10 @@ http://127.0.0.1:8000/
 
 ## Run Locally With Waitress
 
-After implementation provides the Django WSGI module and Waitress entry point,
-launch with a command equivalent to:
+After implementation provides a WSGI app and optional Waitress entry point:
 
 ```bash
-python -m waitress --listen=127.0.0.1:8000 bankapp.wsgi:application
+waitress-serve --listen=127.0.0.1:8000 bankapp.wsgi:application
 ```
 
 Open:
@@ -82,41 +117,6 @@ Open:
 http://127.0.0.1:8000/
 ```
 
-## Implementation Verification
-
-Verification performed on 2026-05-25:
-
-- `python manage.py check`: passed.
-- `python manage.py makemigrations --check --dry-run`: passed with no changes
-  detected.
-- `python manage.py migrate`: passed on SQLite.
-- `python manage.py collectstatic --noinput`: passed.
-- `python manage.py test`: 44 tests passed.
-- Django development server responded locally at `/login/`.
-- Waitress responded locally at `/login/`.
-
-## Safety Notice
-
-This application is a local learning MVP. It is not real banking software, does
-not move real money, has no external banking integration, and is not suitable
-for public production use.
-
-```text
-http://127.0.0.1:8000/
-```
-
-## Static Files
-
-For local use, custom CSS may be served by Django during development. If the
-implementation uses collected static files for Waitress execution, run:
-
-```bash
-python manage.py collectstatic
-```
-
 ## Local MVP Disclaimer
 
-This project is a local learning MVP. It must not be connected to real banking
-systems, real money movement, public production traffic, or external payment
-providers. SQLite and local Waitress execution are intentionally scoped for
-simple macOS demonstration and testing only.
+This application is a training/local MVP. It does not integrate with banks, payment networks, external identity providers, real email delivery, government UEN registries, OTP systems, fraud controls, or production-grade financial infrastructure. Do not use it for real funds or public production banking.

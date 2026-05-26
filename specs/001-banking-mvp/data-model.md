@@ -1,98 +1,199 @@
-# Data Model: Banking MVP
+# Data Model: Banking MVP Constitution v2.0.0
 
-## Overview
+This document describes planned entities, relationships, constraints, state values, and validation responsibility. It is not a database schema.
 
-The MVP uses Django models in two apps:
+## Model Overview
 
-- `users`: authentication identity.
-- `banking`: accounts, balances, transfers, approvals, and completed financial
-  history.
+```text
+CustomUser (PERSONAL) 1--1 PersonalAccount
+CustomUser (BUSINESS) 1--* BusinessMembership *--1 BusinessAccount
+BusinessAccount 1--* BusinessInvitation
+BusinessAccount 1--* BusinessAccessAuditEvent
+BusinessAccount 1--* BusinessApprovalRequest
+PersonalAccount / BusinessAccount -- completed financial transactions
+PersonalAccount / BusinessAccount -- completed transfer operations
+```
 
-All money is SGD and stored with exact decimal fields. All identifiers used for
-completed financial audit records are UUID values.
+Personal and Business accounts are separate concrete domain entities. Money records use explicit references to either a Personal Account or a Business Account.
 
-## Entity: CustomUser
+## CustomUser
 
-**Purpose**: Login identity and owner of up to one Personal Account and one
-Business Account.
+**Purpose**: Authenticated login identity.
 
-**Fields**:
+**Fields / responsibilities**:
 
-- `id`: internal primary key.
-- `email`: unique, normalised email used for login.
-- `username`: user-selected display name.
+- UUID or integer internal user identifier.
+- `email`: globally unique login identifier.
+- `username`: user-facing display name.
 - `password`: Django-managed password hash.
-- Standard Django auth metadata: active flag, staff/superuser flags where
-  applicable, date joined, last login.
-
-**Relationships**:
-
-- Owns zero or one Personal `BankAccount`.
-- Owns zero or one Business `BankAccount`.
-
-**Constraints and validation**:
-
-- Email is required and unique.
-- Password is never stored or displayed in plaintext.
-- Authentication uses Django password hashing.
-
-## Entity: BankAccount
-
-**Purpose**: Store both Personal and Business Accounts with shared balance and
-ownership behaviour.
-
-**Design decision**: Use one `BankAccount` model with an account-type
-discriminator. This keeps transfers, histories, and balances simple while
-constraints guard type-specific fields.
-
-**Common fields**:
-
-- `id`: internal primary key.
-- `account_id`: UUID public/internal account identifier.
-- `owner`: required relationship to `CustomUser`.
-- `account_type`: `PERSONAL` or `BUSINESS`.
-- `balance`: `DecimalField(max_digits=12, decimal_places=2)`.
-- `created_at`: timestamp.
-
-**Personal-only fields**:
-
-- `phone_number`: required and unique when `account_type = PERSONAL`; empty for
-  Business Accounts.
-
-**Business-only fields**:
-
-- `business_display_name`: required when `account_type = BUSINESS`.
-- `uen`: required and unique when `account_type = BUSINESS`; empty for Personal
-  Accounts.
-- `authorised_personal_account`: required relationship to the owner's Personal
-  Account when `account_type = BUSINESS`.
+- `access_context`: `PERSONAL` or `BUSINESS`.
+- Standard Django authentication metadata.
 
 **Constraints**:
 
-- One Personal Account per user.
-- One Business Account per user.
-- Personal Account phone numbers are unique among Personal Accounts.
-- Business Account UEN values are unique among Business Accounts.
+- Email is unique across all Personal and Business identities.
+- Access context is required.
+- Access context is not changed through ordinary MVP flows.
+- Password is never stored or displayed in plaintext.
+
+**Validation responsibility**:
+
+- Forms validate required fields and password confirmation.
+- User model/manager normalizes email and creates password hash.
+- Services enforce that Personal registration creates `PERSONAL` and Business registration creates `BUSINESS`.
+
+## PersonalAccount
+
+**Purpose**: Individual SGD account for one Personal user.
+
+**Fields**:
+
+- `account_id`: UUID account identifier.
+- `owner`: one-to-one reference to `CustomUser` with `access_context=PERSONAL`.
+- `phone_number`: required unique receiving phone number.
+- `balance`: exact decimal SGD balance.
+- `created_at`: timestamp.
+
+**Constraints**:
+
+- One Personal Account per Personal user.
+- Only a `PERSONAL` user may own a Personal Account.
+- Phone number is unique among Personal Accounts.
+- Balance starts at SGD 0.00.
 - Balance must not be negative.
-- Personal type requires phone number and forbids UEN/business display name.
-- Business type requires business display name, UEN, and authorised Personal
-  Account; forbids phone number as a transfer recipient identifier.
-- Business authorised Personal Account must belong to the same owner.
-- Business Account creation below SGD 7,000.00 is rejected.
+- No opening deposit or retained minimum exists.
 
-**Validation responsibilities**:
+**Validation responsibility**:
 
-- Forms: input shape, labels, user-facing errors.
-- Services: ownership, business prerequisites, opening deposit, no negative
-  balances, retained minimum, recipient identity, authorisation.
-- Database/model constraints: uniqueness, non-negative structural balance,
-  one-account-per-type ownership, and type-specific field consistency where
-  practical.
+- Registration form normalizes and validates phone input.
+- Service enforces Personal-only user creation and duplicate phone rejection.
+- Model/database enforce uniqueness and non-negative balance where practical.
 
-## Entity: CompletedTransaction
+## BusinessAccount
 
-**Purpose**: Immutable audit record for completed balance-changing financial
-movements.
+**Purpose**: Company-owned shared SGD account.
+
+**Fields**:
+
+- `account_id`: UUID account identifier.
+- `business_display_name`: required display name.
+- `uen`: required unique UEN for receiving transfers.
+- `balance`: exact decimal SGD balance.
+- `created_at`: timestamp.
+- `is_active`: optional; use only if needed for future account disablement. The approved creation flow rejects invalid setup instead of saving inactive accounts.
+
+**Constraints**:
+
+- UEN is unique among Business Accounts.
+- Opening deposit must be at least SGD 7,000.00.
+- Access is controlled through active Business Memberships, not Personal Account ownership.
+- At least one active AUTHORISER membership must exist after creation and after every membership-management action.
+- Completed outgoing withdrawals/transfers must leave balance at least SGD 7,000.00.
+- Balance must not be negative.
+
+**Validation responsibility**:
+
+- Forms normalize UEN to uppercase and trim whitespace.
+- Business registration service enforces opening deposit, UEN uniqueness, initial AUTHORISER, opening transaction, and audit events atomically.
+- Approval service enforces retained minimum at completion time.
+
+## BusinessMembership
+
+**Purpose**: Active or historical access relationship between a Business user and a Business Account.
+
+**Fields**:
+
+- `membership_id`: UUID.
+- `business_account`: reference to Business Account.
+- `business_user`: reference to `CustomUser` with `access_context=BUSINESS`.
+- `role`: `MEMBER` or `AUTHORISER`.
+- `is_active`: boolean.
+- `created_at`: timestamp.
+- `removed_at`: nullable timestamp.
+- `removed_by`: nullable Business user reference for accountability.
+
+**Constraints**:
+
+- Only `BUSINESS` users may have memberships.
+- One active membership per Business user per Business Account.
+- A Business user may have active memberships in multiple Business Accounts.
+- A Business Account may have multiple AUTHORISERS.
+- Removing or changing memberships must not leave zero active AUTHORISERS.
+- Promotion from MEMBER to AUTHORISER is supported.
+- Demotion from AUTHORISER to MEMBER is unsupported and rejected.
+
+**Removal strategy**:
+
+- Removal sets `is_active=false` and `removed_at`, rather than deleting the row.
+- Permission checks use active memberships only.
+
+## BusinessInvitation
+
+**Purpose**: Pending or historical invitation for Business Account access.
+
+**Fields**:
+
+- `invitation_id`: UUID.
+- `business_account`: reference to Business Account.
+- `invited_email`: normalized invited email.
+- `intended_role`: `MEMBER` or `AUTHORISER`.
+- `invited_by`: active AUTHORISER Business user or membership.
+- `status`: `PENDING`, `ACCEPTED`, or `CANCELLED`.
+- `issued_at`: timestamp.
+- `accepted_at`: nullable timestamp.
+- `accepted_by`: nullable Business user.
+
+**Constraints**:
+
+- Only active AUTHORISER may issue invitations.
+- Invitation grants no access until accepted.
+- Only a `BUSINESS` user with email matching `invited_email` may accept.
+- Personal users cannot accept.
+- Duplicate `PENDING` invitation for the same Business Account and email is rejected.
+- Invitation expiry is excluded from MVP.
+
+**Validation responsibility**:
+
+- Invitation service enforces inviter role, duplicate pending rule, status transition, matching email, and Business-only acceptance.
+
+## BusinessAccessAuditEvent
+
+**Purpose**: Immutable access-governance audit record.
+
+**Event types**:
+
+- `BUSINESS_ACCOUNT_CREATED`
+- `INITIAL_AUTHORISER_ASSIGNED`
+- `INVITATION_ISSUED`
+- `INVITATION_ACCEPTED`
+- `ROLE_ASSIGNED`
+- `MEMBER_PROMOTED_TO_AUTHORISER`
+- `MEMBER_REMOVED`
+- `AUTHORISER_REMOVED`
+- `LAST_AUTHORISER_REMOVAL_REJECTED`
+
+**Fields**:
+
+- `event_id`: UUID.
+- `business_account`: reference to Business Account.
+- `acting_user`: nullable Business user.
+- `affected_user`: nullable Business user.
+- `invited_email`: nullable email.
+- `role`: nullable `MEMBER` or `AUTHORISER`.
+- `event_type`: required event type.
+- `outcome`: success or rejected/invalid status.
+- `details`: safe explanatory text.
+- `created_at`: timestamp.
+
+**Constraints**:
+
+- Audit events are not financial transactions.
+- Audit events are not editable through ordinary user flows.
+- Visible only to active members of the relevant Business Account.
+
+## CompletedFinancialTransaction
+
+**Purpose**: Immutable record for completed money movement.
 
 **Transaction types**:
 
@@ -104,64 +205,59 @@ movements.
 
 **Fields**:
 
-- `transaction_id`: UUID, unique.
-- `account`: related `BankAccount`.
-- `transaction_type`: one of the completed transaction types.
-- `amount`: `DecimalField(max_digits=12, decimal_places=2)`.
-- `currency`: fixed `SGD` representation or implied by invariant.
-- `status`: completed-record representation, fixed to completed for this model.
-- `created_at` / `completed_at`: completion timestamp.
-- `transfer_operation`: optional relationship to `TransferOperation`.
-- `approval_request`: optional relationship to `ApprovalRequest` for completed
-  Business outgoing operations.
+- `transaction_id`: UUID.
+- `personal_account`: nullable Personal Account reference.
+- `business_account`: nullable Business Account reference.
+- `transaction_type`: required type.
+- `amount`: exact decimal SGD amount.
+- `status`: completed representation only; completed financial transaction rows are never PENDING/FAILED.
+- `completed_at`: timestamp.
+- `transfer_operation`: nullable Transfer Operation.
+- `business_approval_request`: nullable Business Approval Request.
+- `actor_user`: nullable user who initiated or caused the movement.
+- `description`: safe display text.
 
-**Rules**:
+**Constraints**:
 
-- Every successful deposit creates one `DEPOSIT`.
-- Every successfully completed withdrawal creates one `WITHDRAWAL`.
-- Every successfully completed transfer creates one `TRANSFER_DEBIT` and one
-  `TRANSFER_CREDIT`.
-- Business Account opening funding creates one `BUSINESS_OPENING_DEPOSIT`.
-- Records are not editable or deletable through ordinary user-facing flows.
-- Failed, PENDING, REJECTED, CANCELLED, and FAILED approval requests do not
-  create completed transaction records.
+- Exactly one of `personal_account` or `business_account` must be set.
+- Amount must be positive.
+- Completed rows are immutable through user-facing flows.
+- Successful transfer creates exactly two transaction rows, one debit and one credit, sharing one Transfer Operation.
+- Failed, PENDING, REJECTED, CANCELLED, or FAILED approval records do not create completed financial transactions.
 
-## Entity: TransferOperation
+## TransferOperation
 
-**Purpose**: Represent one completed transfer movement linking sender and
-recipient transaction records.
+**Purpose**: Shared identifier for a successfully completed transfer.
 
 **Fields**:
 
-- `transfer_operation_id`: UUID, unique.
-- `sender_account`: related `BankAccount`.
-- `recipient_account`: related `BankAccount`.
-- `amount`: `DecimalField(max_digits=12, decimal_places=2)`.
-- `currency`: fixed `SGD` representation or implied by invariant.
-- `status`: `COMPLETED` for completed transfer operations.
-- `created_at`: timestamp.
+- `transfer_operation_id`: UUID.
+- `sender_personal_account`: nullable Personal Account.
+- `sender_business_account`: nullable Business Account.
+- `recipient_personal_account`: nullable Personal Account.
+- `recipient_business_account`: nullable Business Account.
+- `amount`: exact decimal SGD amount.
 - `completed_at`: timestamp.
+- `business_approval_request`: nullable Business Approval Request for completed Business outgoing transfers.
 
-**Rules**:
+**Constraints**:
 
-- A completed transfer has exactly one sender debit completed transaction and
-  one recipient credit completed transaction.
-- Both completed transaction records reference the same transfer operation ID.
-- Each transaction record keeps its own UUID transaction ID.
-- PENDING Business transfer requests do not create completed transfer operation
-  records until approval succeeds and money moves.
+- Exactly one sender account is set.
+- Exactly one recipient account is set.
+- Sender and recipient cannot be the same account.
+- PENDING Business transfer requests do not create Transfer Operation rows.
+- Each completed Transfer Operation must link one debit and one credit CompletedFinancialTransaction.
 
-## Entity: ApprovalRequest
+## BusinessApprovalRequest
 
-**Purpose**: Workflow record for outgoing Business Account withdrawals and
-transfers requiring approval.
+**Purpose**: Workflow record for outgoing Business withdrawal or transfer requiring AUTHORISER action.
 
 **Request types**:
 
 - `BUSINESS_WITHDRAWAL`
 - `BUSINESS_TRANSFER`
 
-**Statuses**:
+**Persisted statuses**:
 
 - `PENDING`
 - `COMPLETED`
@@ -169,75 +265,69 @@ transfers requiring approval.
 - `CANCELLED`
 - `FAILED`
 
-No persisted `APPROVED` status exists.
-
 **Fields**:
 
-- `request_id`: UUID, unique.
-- `business_account`: requesting Business Account.
-- `authorised_personal_account`: required authorised Personal Account.
-- `request_type`: withdrawal or transfer.
-- `amount`: `DecimalField(max_digits=12, decimal_places=2)`.
-- `recipient_account`: required for transfer requests, empty for withdrawal.
-- `recipient_type_snapshot`: Personal or Business for audit display.
-- `recipient_identifier_snapshot`: masked or safe identifier display data.
-- `status`: one of the five allowed statuses.
+- `request_id`: UUID.
+- `business_account`: Business Account.
+- `requested_by_membership`: requesting Business Membership.
+- `requested_by_user`: requesting Business user snapshot/reference.
+- `request_type`: required type.
+- `amount`: exact decimal SGD amount.
+- `recipient_personal_account`: nullable for transfer requests.
+- `recipient_business_account`: nullable for transfer requests.
+- `recipient_label_snapshot`: safe display label for audit.
 - `requested_at`: timestamp.
-- `resolved_at`: timestamp when terminal.
-- `resolution_note`: safe failure/rejection/cancellation explanation when
-  applicable.
-- `completed_transaction`: optional link for completed withdrawal.
-- `transfer_operation`: optional link for completed transfer.
+- `actioned_by_authoriser_membership`: nullable membership.
+- `actioned_by_user`: nullable Business user.
+- `resolved_at`: nullable timestamp.
+- `status`: required persisted status.
+- `safe_reason`: nullable safe explanation.
+- `completed_transaction`: nullable for completed withdrawal.
+- `completed_transfer_operation`: nullable for completed transfer.
 
-**Rules**:
+**Constraints**:
 
+- Submission requires active MEMBER or AUTHORISER membership.
+- Approval/rejection requires active AUTHORISER membership.
+- Cancellation requires requester ownership or active AUTHORISER membership.
 - Only PENDING requests may transition.
 - COMPLETED, REJECTED, CANCELLED, and FAILED are final.
-- PENDING requests do not modify balances, reserve funds, or create completed
-  transaction records.
-- Approval action revalidates amount, current Business Account balance, retained
-  minimum, and authorised identity.
-- Successful approval and completed money movement changes PENDING to COMPLETED.
-- Approval-time validation failure changes PENDING to FAILED with no money
-  movement.
-- Rejection changes PENDING to REJECTED with no money movement.
-- Owner cancellation changes PENDING to CANCELLED with no money movement.
-
-## Identifier Normalisation
-
-### Personal Account Phone Number
-
-- Required only for Personal Accounts.
-- Unique among Personal Accounts.
-- Trim surrounding whitespace.
-- Remove common visual separators such as spaces and hyphens for comparison.
-- Store in a consistent Singapore-oriented normalised form.
-- No OTP or external telecom verification in MVP.
-
-### Business Account UEN
-
-- Required only for Business Accounts.
-- Unique among Business Accounts.
-- Trim surrounding whitespace.
-- Uppercase before storage and comparison.
-- Treat as user-supplied, format-validated, unique application data.
-- No external Singapore registry lookup in MVP.
-
-## Money Validation
-
-- Calculations use Python `Decimal`.
-- Stored money uses `DecimalField(max_digits=12, decimal_places=2)`.
-- Reject zero, negative, non-numeric, malformed, non-SGD, excessive-precision,
-  and over-capacity amounts.
-- Display all money as `SGD 0.00`.
+- There is no persisted APPROVED status.
+- PENDING requests do not reserve funds, change balances, or create completed financial records.
+- Multiple PENDING requests may coexist.
+- Approval revalidates current balance and retained minimum.
 
 ## State Transitions
 
+### Business Invitation
+
 ```text
-PENDING -> COMPLETED
-PENDING -> REJECTED
+PENDING -> ACCEPTED
 PENDING -> CANCELLED
-PENDING -> FAILED
+ACCEPTED and CANCELLED are final for MVP.
 ```
 
-No other approval request transitions are allowed.
+### Business Membership
+
+```text
+MEMBER active -> AUTHORISER active
+MEMBER active -> inactive removed
+AUTHORISER active -> inactive removed, only if another active AUTHORISER remains
+AUTHORISER -> MEMBER demotion is rejected
+```
+
+### Business Approval Request
+
+```text
+PENDING -> COMPLETED   (AUTHORISER approval + financial completion succeeds)
+PENDING -> FAILED      (AUTHORISER approval attempted + validation fails)
+PENDING -> REJECTED    (AUTHORISER rejects)
+PENDING -> CANCELLED   (requester cancels own request or AUTHORISER cancels)
+COMPLETED, FAILED, REJECTED, CANCELLED are final.
+```
+
+## Validation Responsibility Summary
+
+- **Forms**: required fields, format feedback, amount input parsing messages, confirmation screens.
+- **Services**: authoritative permissions, context checks, active memberships, role checks, final-AUTHORISER protection, money validation, retained minimum, transfer resolution, atomicity, and audit creation.
+- **Models/database**: uniqueness, required relationships, status/role choices, non-negative balances, and "exactly one account reference" constraints where practical for SQLite.
