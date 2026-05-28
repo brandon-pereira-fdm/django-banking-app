@@ -1,14 +1,18 @@
 from django.test import TestCase
-from django.urls import reverse
 
 
-class PublicOnboardingViewsTests(TestCase):
-    def test_account_type_selection_separates_personal_and_business(self):
-        response = self.client.get(reverse("account_type_selection"))
+class PublicOnboardingViewTests(TestCase):
+    def test_product_selection_has_v3_account_paths_without_old_terms(self):
+        response = self.client.get("/")
         self.assertContains(response, "Personal Account")
-        self.assertContains(response, "phone number")
-        self.assertContains(response, "SGD 0.00")
         self.assertContains(response, "Business Account")
+        self.assertContains(response, "Phone number")
         self.assertContains(response, "UEN")
-        self.assertContains(response, "SGD 7,000.00")
-        self.assertContains(response, "AUTHORISER approval")
+        self.assertContains(response, "employee access")
+        self.assertNotContains(response, "Invite Business User")
+        self.assertNotContains(response, "Store Invitation")
+
+    def test_login_page_available(self):
+        response = self.client.get("/login/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sign In")

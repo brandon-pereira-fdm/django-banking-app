@@ -1,0 +1,21 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="panel">
+  <p class="eyebrow">Approval Review</p>
+  <h1>{{ approval.request_type }}</h1>
+  <div class="summary-grid compact">
+    <article class="metric-card"><span>Amount</span><strong>{{ approval.amount|sgd }}</strong></article>
+    <article class="metric-card"><span>Status</span><strong>{{ approval.status }}</strong></article>
+    <article class="metric-card"><span>Projected Balance</span><strong>{{ account.balance|subtract:approval.amount|sgd }}</strong></article>
+    <article class="metric-card"><span>Retained Minimum</span><strong>SGD 7,000.00</strong></article>
+  </div>
+  <p>Requester: {{ approval.requested_by.user.username }} · {{ approval.requested_by.role }}</p>
+  {% if approval.recipient_name_snapshot %}<p>Recipient: {{ approval.recipient_name_snapshot }} ({{ approval.recipient_type_snapshot }} {{ approval.recipient_identifier_snapshot }})</p>{% endif %}
+  {% if approval.status == "PENDING" %}
+    <form class="action-row" method="post" action="{% url 'approval_action' approval.request_id 'approve' %}">{% csrf_token %}<button class="button primary" type="submit">Approve</button></form>
+    <form class="action-row" method="post" action="{% url 'approval_action' approval.request_id 'reject' %}">{% csrf_token %}<button class="button warning" type="submit">Reject</button></form>
+    <form class="action-row" method="post" action="{% url 'approval_action' approval.request_id 'cancel' %}">{% csrf_token %}<button class="button destructive" type="submit">Cancel</button></form>
+  {% endif %}
+</section>
+{% endblock %}

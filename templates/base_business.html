@@ -1,35 +1,28 @@
-{% load banking_extras %}
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Business | Midnight Ledger{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/midnight-ledger.css">
+  <link rel="stylesheet" href="{% static 'css/midnight-ledger.css' %}">
 </head>
 <body class="app-shell">
-  <aside class="sidebar" aria-label="Business navigation">
-    <a class="brand" href="{% url 'business_home' %}">Midnight Ledger</a>
-    <nav>
-      <a href="{% url 'business_home' %}">Business Dashboard</a>
-      {% if account %}
-        <a href="{% url 'business_deposit' account.account_id %}">Deposit</a>
-        <a href="{% url 'business_withdraw_request' account.account_id %}">Request Withdrawal</a>
-        <a href="{% url 'business_transfer_request' account.account_id %}">Request Transfer</a>
-        <a href="{% url 'approvals_list' account.account_id %}">Approvals</a>
-        <a href="{% url 'business_members' account.account_id %}">Members</a>
-        <a href="{% url 'business_invitations' account.account_id %}">Invitations</a>
-        <a href="{% url 'access_audit' account.account_id %}">Access Audit</a>
-        <a href="{% url 'business_transactions' account.account_id %}">Transactions</a>
-      {% endif %}
+  <aside class="sidebar">
+    <div class="brand">Midnight Ledger</div>
+    <nav class="nav-list" aria-label="Business navigation">
+      <a href="{% url 'business_dashboard' %}">Business Dashboard</a>
+      <a href="{% url 'business_deposit' %}">Deposit</a>
+      <a href="{% url 'business_withdraw_request' %}">Request Withdrawal</a>
+      <a href="{% url 'business_transfer_request' %}">Request Transfer</a>
+      <a href="{% url 'approvals_list' %}">Approvals</a>
+      <a href="{% url 'team_access' %}">Team Access</a>
+      <a href="{% url 'access_audit' %}">Access Audit</a>
+      <a href="{% url 'business_transactions' %}">Transactions</a>
       <a href="{% url 'logout' %}">Sign Out</a>
     </nav>
   </aside>
-  <main class="content">
-    <header class="topbar">
-      <span>{{ request.user.username }}</span>
-      {% if membership %}<span class="badge">{{ membership.role }}</span>{% else %}<span class="badge">BUSINESS</span>{% endif %}
-    </header>
+  <main class="app-main">
     {% include "includes/messages.html" %}
     {% block content %}{% endblock %}
   </main>

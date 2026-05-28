@@ -1,21 +1,21 @@
 # Traceability: Banking MVP Constitution v3.0.0
 
-This map links v3 specification requirements to planned components and tests. Task IDs will be finalized after `/speckit.tasks` is regenerated.
+This map links v3 specification requirements to implemented components and tests after `/speckit.implement`.
 
 ## Requirement to Component and Test Map
 
 | Requirement IDs | Planned Component(s) | Planned Test Coverage |
 |---|---|---|
-| FR-001 to FR-010, BR-007 to BR-011, SEC-001 to SEC-003 | `users.CustomUser`, login context guards, auth views/forms | TEST-001 to TEST-006, TEST-011 |
-| FR-011 to FR-020, BR-012 to BR-015 | `PersonalAccount`, Personal registration service, Personal pages | TEST-007 to TEST-008, TEST-036, TEST-039 to TEST-042 |
-| FR-021 to FR-031, BR-016 to BR-020 | `BusinessAccount`, `BusinessEmployeeAccess`, opening transaction, Access Audit events | TEST-002, TEST-009 to TEST-010 |
-| FR-032 to FR-047, BR-021 to BR-027, SEC-004 to SEC-006 | `BusinessEmployeeAccess`, Team Access services/forms/views, password-change/reset services | TEST-012 to TEST-024, TEST-034 to TEST-035 |
-| FR-048 to FR-066, SEC-006 to SEC-013 | role permission helpers, Team Access admin services, deactivation/reactivation, audit | TEST-025 to TEST-033, TEST-050, TEST-061 to TEST-062, TEST-066 to TEST-067 |
-| FR-067 to FR-075, BR-039 to BR-042 | recipient resolution service, transfer forms/views, `TransferOperation` | TEST-043 to TEST-046 |
-| FR-076 to FR-086, BR-030 to BR-038 | `BusinessOutgoingRequest`, request/approval services, approval pages | TEST-047 to TEST-060 |
-| FR-087 to FR-091, BR-001 to BR-006, BR-043 to BR-044, NFR-004 | money validation, transaction services, completed transaction records | TEST-036 to TEST-046, TEST-059 to TEST-060 |
-| FR-092 to FR-097, BR-045 to BR-046 | Transaction History, Approval History, Access Audit History pages/queries | TEST-061 to TEST-067 |
-| UX-001 to UX-029, NFR-006 | Django templates, custom CSS, navigation shells, reusable UI components | TEST-068 to TEST-069 plus manual UI checks |
+| FR-001 to FR-010, BR-007 to BR-011, SEC-001 to SEC-003 | `users.CustomUser`, `users.permissions`, auth views/forms | `users/tests/test_authentication.py`, `users/tests/test_access_context.py` |
+| FR-011 to FR-020, BR-012 to BR-015 | `PersonalAccount`, `banking.services.registration`, Personal pages | `banking/tests/test_registration.py`, `banking/tests/test_financial_operations.py` |
+| FR-021 to FR-031, BR-016 to BR-020 | `BusinessAccount`, `BusinessEmployeeAccess`, opening transaction, Access Audit events | `banking/tests/test_registration.py`, `banking/tests/test_models.py` |
+| FR-032 to FR-047, BR-021 to BR-027, SEC-004 to SEC-006 | Team Access services/forms/views, mandatory password change, password reset | `banking/tests/test_employee_access.py` and wrapper modules for password workflows/reset |
+| FR-048 to FR-066, SEC-006 to SEC-013 | role permission helpers, promotion, deactivation/reactivation, audit | `banking/tests/test_employee_access.py`, `banking/tests/test_access_control.py` |
+| FR-067 to FR-075, BR-039 to BR-042 | recipient resolution, transfer forms/views, `TransferOperation` | `banking/tests/test_financial_operations.py`, wrapper modules for recipient resolution/transfers |
+| FR-076 to FR-086, BR-030 to BR-038 | `BusinessOutgoingRequest`, request/approval services, approval pages | `banking/tests/test_financial_operations.py`, wrapper modules for requests/approvals/multiple pending |
+| FR-087 to FR-091, BR-001 to BR-006, BR-043 to BR-044, NFR-004 | money validation, transaction services, completed transaction records | `banking/tests/test_money_validation.py`, `banking/tests/test_financial_operations.py` |
+| FR-092 to FR-097, BR-045 to BR-046 | Transaction History, Approval History, Access Audit History pages/queries | `banking/tests/test_histories_and_security.py`, `banking/tests/test_histories.py` |
+| UX-001 to UX-029, NFR-006 | Django templates, custom CSS, navigation shells, Team Access UI | `users/tests/test_public_onboarding_views.py`, `banking/tests/test_histories_and_security.py`, manual quickstart notes |
 | NFR-001 to NFR-009 | governance, atomicity, traceability docs, services, test suite | All TEST identifiers |
 
 ## Planned Test Module Mapping
@@ -38,6 +38,8 @@ This map links v3 specification requirements to planned components and tests. Ta
 | `banking/tests/test_multiple_pending.py` | FR-077 to FR-082, TEST-058 to TEST-060 |
 | `banking/tests/test_histories.py` | FR-092 to FR-097, TEST-061 to TEST-067 |
 | `banking/tests/test_ui_permissions.py` | UX-001 to UX-029, TEST-068 to TEST-069 |
+
+Wrapper modules are present for the task-specified test file names where coverage is implemented in consolidated service/view test classes.
 
 ## Superseded Traceability Notice
 

@@ -3,56 +3,49 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from users.permissions import business_required, personal_required
+from users.permissions import active_business_employee_required, personal_required
 
-from .forms import AmountForm, InvitationForm, ResolutionForm, TransferForm
-from .models import (
-    BusinessAccessAuditEvent,
-    BusinessAccount,
-    BusinessApprovalRequest,
-    BusinessInvitation,
-    BusinessMembership,
-    CompletedFinancialTransaction,
-)
+from .forms import AddEmployeeAccessForm, AmountForm, ResolutionForm, TemporaryPasswordForm, TransferForm
+from .models import BusinessEmployeeAccess, BusinessOutgoingRequest
 from .services import (
     BankingError,
-    accept_invitation,
-    approve_request,
-    cancel_request,
-    create_invitation,
+    approve_business_request,
+    cancel_business_request,
+    deactivate_employee_access,
     deposit_business,
     deposit_personal,
-    get_active_membership,
-    promote_member,
-    reject_request,
-    remove_membership,
-    request_business_transfer,
-    request_business_withdrawal,
-    require_authoriser,
-    require_business_membership,
+    promote_member_to_authoriser,
+    provision_employee_access,
+    reactivate_employee_access,
+    reject_business_request,
+    reset_employee_temporary_password,
+    submit_business_transfer_request,
+    submit_business_withdrawal_request,
+    team_access_summary,
     transfer_from_personal,
     withdraw_personal,
 )
+from .services.histories import business_access_audit_history, business_approval_history, business_transactions, personal_transactions
 
 
 def dashboard(request):
     if not request.user.is_authenticated:
         return redirect("account_type_selection")
-    if request.user.access_context == "PERSONAL":
+    if request.user.login_context == "PERSONAL":
         return redirect("personal_dashboard")
-    return redirect("business_home")
+    return redirect("business_dashboard")
 
 
 @personal_required
 def personal_dashboard(request):
     account = request.user.personal_account
     transactions = account.completed_transactions.all()[:5]
-    return render(request, "banking/personal/dashboard.html", {"account": account, "transactions": transactions})
+    return render(request, "banking/personal_dashboard.html", {"account": account, "transactions": transactions})
 
 
 @personal_required
 def personal_account_detail(request):
-    return render(request, "banking/personal/detail.html", {"account": request.user.personal_account})
+    return render(request, "banking/personal_account.html", {"account": request.user.personal_account})
 
 
 @personal_required
@@ -65,8 +58,8 @@ def personal_deposit(request):
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            return render(request, "banking/personal/result.html", {"title": "Deposit completed", "transaction": tx})
-    return render(request, "banking/personal/amount_form.html", {"form": form, "title": "Deposit"})
+            return render(request, "banking/result.html", {"title": "Deposit completed", "transaction": tx})
+    return render(request, "banking/amount_form.html", {"form": form, "title": "Deposit", "scope": "Personal", "base_template": "base_personal.html"})
 
 
 @personal_required
@@ -79,8 +72,8 @@ def personal_withdraw(request):
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            return render(request, "banking/personal/result.html", {"title": "Withdrawal completed", "transaction": tx})
-    return render(request, "banking/personal/amount_form.html", {"form": form, "title": "Withdraw"})
+            return render(request, "banking/result.html", {"title": "Withdrawal completed", "transaction": tx})
+    return render(request, "banking/amount_form.html", {"form": form, "title": "Withdraw", "scope": "Personal", "base_template": "base_personal.html"})
 
 
 @personal_required
@@ -101,58 +94,47 @@ def personal_transfer(request):
         else:
             return render(
                 request,
-                "banking/transfers/result.html",
+                "banking/transfer_result.html",
                 {"transfer": transfer, "debit": debit, "credit": credit, "title": "Transfer completed"},
             )
-    return render(request, "banking/transfers/form.html", {"form": form, "title": "Transfer"})
+    return render(request, "banking/transfer_form.html", {"form": form, "title": "Transfer", "scope": "Personal"})
 
 
 @personal_required
-def personal_transactions(request):
-    account = request.user.personal_account
-    transactions = account.completed_transactions.select_related("transfer_operation")
-    return render(request, "banking/histories/transactions.html", {"transactions": transactions, "scope": "Personal"})
-
-
-@business_required
-def business_home(request):
-    memberships = BusinessMembership.objects.select_related("business_account").filter(user=request.user, is_active=True)
-    if memberships.count() == 1:
-        return redirect("business_dashboard", account_id=memberships.first().business_account.account_id)
-    return render(request, "banking/business/selector.html", {"memberships": memberships})
-
-
-def _business_context(request, account_id):
-    account = get_object_or_404(BusinessAccount, account_id=account_id)
-    membership = get_active_membership(request.user, account)
-    if membership is None:
-        raise PermissionDenied("Active Business membership is required.")
-    return account, membership
-
-
-@business_required
-def business_dashboard(request, account_id):
-    account, membership = _business_context(request, account_id)
-    pending_count = account.approval_requests.filter(status=BusinessApprovalRequest.PENDING).count()
-    recent_transactions = account.completed_transactions.all()[:5]
-    recent_requests = account.approval_requests.all()[:5]
+def personal_transaction_history(request):
     return render(
         request,
-        "banking/business/dashboard.html",
+        "banking/transaction_history.html",
+        {"transactions": personal_transactions(request.user), "scope": "Personal", "base_template": "base_personal.html"},
+    )
+
+
+@active_business_employee_required
+def business_dashboard(request):
+    access = request.business_access
+    account = access.business_account
+    pending_count = account.outgoing_requests.filter(status=BusinessOutgoingRequest.PENDING).count()
+    recent_transactions = account.completed_transactions.all()[:5]
+    recent_requests = account.outgoing_requests.select_related("requested_by__user", "actioned_by__user")[:5]
+    summary = team_access_summary(request.user) if access.role == BusinessEmployeeAccess.AUTHORISER else None
+    return render(
+        request,
+        "banking/business_dashboard.html",
         {
             "account": account,
-            "membership": membership,
+            "access": access,
             "pending_count": pending_count,
             "recent_transactions": recent_transactions,
             "recent_requests": recent_requests,
+            "team_summary": summary,
         },
     )
 
 
-@business_required
+@active_business_employee_required
 @require_http_methods(["GET", "POST"])
-def business_deposit(request, account_id):
-    account, membership = _business_context(request, account_id)
+def business_deposit(request):
+    account = request.business_account
     form = AmountForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -160,33 +142,33 @@ def business_deposit(request, account_id):
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            return render(request, "banking/business/result.html", {"title": "Business deposit completed", "transaction": tx, "account": account})
-    return render(request, "banking/business/amount_form.html", {"form": form, "title": "Business Deposit", "account": account, "membership": membership})
+            return render(request, "banking/result.html", {"title": "Business deposit completed", "transaction": tx, "account": account})
+    return render(request, "banking/amount_form.html", {"form": form, "title": "Business Deposit", "scope": "Business", "account": account, "base_template": "base_business.html"})
 
 
-@business_required
+@active_business_employee_required
 @require_http_methods(["GET", "POST"])
-def business_withdraw_request(request, account_id):
-    account, membership = _business_context(request, account_id)
+def business_withdraw_request(request):
+    account = request.business_account
     form = AmountForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            approval = request_business_withdrawal(request.user, account, form.cleaned_data["amount"])
+            approval = submit_business_withdrawal_request(request.user, account, form.cleaned_data["amount"])
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            return render(request, "banking/approvals/result.html", {"title": "Withdrawal request pending", "approval": approval, "account": account})
-    return render(request, "banking/business/amount_form.html", {"form": form, "title": "Request Withdrawal", "account": account, "membership": membership})
+            return render(request, "banking/request_result.html", {"title": "Withdrawal request pending", "approval": approval, "account": account})
+    return render(request, "banking/amount_form.html", {"form": form, "title": "Request Withdrawal", "scope": "Business", "account": account, "base_template": "base_business.html"})
 
 
-@business_required
+@active_business_employee_required
 @require_http_methods(["GET", "POST"])
-def business_transfer_request(request, account_id):
-    account, membership = _business_context(request, account_id)
+def business_transfer_request(request):
+    account = request.business_account
     form = TransferForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            approval = request_business_transfer(
+            approval = submit_business_transfer_request(
                 request.user,
                 account,
                 form.cleaned_data["recipient_type"],
@@ -196,119 +178,151 @@ def business_transfer_request(request, account_id):
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            return render(request, "banking/approvals/result.html", {"title": "Transfer request pending", "approval": approval, "account": account})
-    return render(request, "banking/transfers/form.html", {"form": form, "title": "Request Transfer", "account": account, "membership": membership})
+            return render(request, "banking/request_result.html", {"title": "Transfer request pending", "approval": approval, "account": account})
+    return render(request, "banking/transfer_form.html", {"form": form, "title": "Request Transfer", "scope": "Business", "account": account, "base_template": "base_business.html"})
 
 
-@business_required
-def approvals_list(request, account_id):
-    account, membership = _business_context(request, account_id)
-    approvals = account.approval_requests.select_related("requested_by", "actioned_by")
-    return render(request, "banking/approvals/list.html", {"account": account, "membership": membership, "approvals": approvals})
+@active_business_employee_required
+def approvals_list(request):
+    approvals = request.business_account.outgoing_requests.select_related("requested_by__user", "actioned_by__user")
+    return render(request, "banking/approvals.html", {"account": request.business_account, "access": request.business_access, "approvals": approvals})
 
 
-@business_required
-def approvals_detail(request, account_id, request_id):
-    account, membership = _business_context(request, account_id)
-    approval = get_object_or_404(account.approval_requests, request_id=request_id)
-    return render(request, "banking/approvals/detail.html", {"account": account, "membership": membership, "approval": approval})
+@active_business_employee_required
+def approvals_detail(request, request_id):
+    approval = get_object_or_404(request.business_account.outgoing_requests, request_id=request_id)
+    return render(request, "banking/approval_detail.html", {"account": request.business_account, "access": request.business_access, "approval": approval})
 
 
-@business_required
+@active_business_employee_required
 @require_POST
-def approval_action(request, account_id, request_id, action):
-    account, membership = _business_context(request, account_id)
-    approval = get_object_or_404(account.approval_requests, request_id=request_id)
+def approval_action(request, request_id, action):
+    approval = get_object_or_404(request.business_account.outgoing_requests, request_id=request_id)
     form = ResolutionForm(request.POST or None)
     if form.is_valid():
         try:
             if action == "approve":
-                approve_request(request.user, approval)
+                approve_business_request(request.user, approval)
             elif action == "reject":
-                reject_request(request.user, approval, form.cleaned_data.get("reason") or "Rejected by AUTHORISER.")
+                reject_business_request(request.user, approval, form.cleaned_data.get("reason") or "Rejected by AUTHORISER.")
             elif action == "cancel":
-                cancel_request(request.user, approval)
+                cancel_business_request(request.user, approval)
             else:
                 raise BankingError("Unsupported approval action.")
             messages.success(request, "Request updated.")
         except BankingError as exc:
             messages.error(request, str(exc))
-    return redirect("approvals_detail", account_id=account.account_id, request_id=approval.request_id)
+    return redirect("approvals_detail", request_id=approval.request_id)
 
 
-@business_required
+@active_business_employee_required
+def team_access(request):
+    context = team_access_summary(request.user)
+    return render(request, "banking/team_access.html", context)
+
+
+@active_business_employee_required
 @require_http_methods(["GET", "POST"])
-def invitations(request, account_id):
-    account, membership = _business_context(request, account_id)
-    form = InvitationForm(request.POST or None)
+def add_employee_access(request):
+    if request.business_access.role != BusinessEmployeeAccess.AUTHORISER:
+        raise PermissionDenied("AUTHORISER access is required.")
+    form = AddEmployeeAccessForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            create_invitation(request.user, account, form.cleaned_data["invited_email"], form.cleaned_data["intended_role"])
+            access = provision_employee_access(
+                request.user,
+                form.cleaned_data["display_name"],
+                form.cleaned_data["email"],
+                form.cleaned_data["role"],
+                form.cleaned_data["temporary_password1"],
+            )
         except BankingError as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Invitation stored.")
-            return redirect("business_invitations", account_id=account.account_id)
-    items = account.invitations.select_related("accepted_by")
-    return render(request, "banking/invitations/list.html", {"account": account, "membership": membership, "form": form, "invitations": items})
+            return render(request, "banking/add_employee_access_success.html", {"employee_access": access})
+    return render(request, "banking/add_employee_access.html", {"form": form, "account": request.business_account})
 
 
-@business_required
+def _target_access(request, access_id):
+    return get_object_or_404(request.business_account.employee_accesses.select_related("user"), access_id=access_id)
+
+
+@active_business_employee_required
 @require_http_methods(["GET", "POST"])
-def accept_invitation_view(request, invitation_id):
-    invitation = get_object_or_404(BusinessInvitation, invitation_id=invitation_id)
-    if request.method == "POST":
+def reset_employee_password(request, access_id):
+    target = _target_access(request, access_id)
+    form = TemporaryPasswordForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
         try:
-            membership = accept_invitation(request.user, invitation)
+            reset_employee_temporary_password(request.user, target, form.cleaned_data["temporary_password1"])
         except BankingError as exc:
-            messages.error(request, str(exc))
+            form.add_error(None, str(exc))
         else:
-            messages.success(request, "Invitation accepted.")
-            return redirect("business_dashboard", account_id=membership.business_account.account_id)
-    return render(request, "banking/invitations/accept.html", {"invitation": invitation})
+            messages.success(request, "Temporary password reset. Employee must change it before normal access.")
+            return redirect("team_access")
+    return render(request, "banking/reset_employee_password.html", {"form": form, "target": target})
 
 
-@business_required
-def members(request, account_id):
-    account, membership = _business_context(request, account_id)
-    roster = account.memberships.select_related("user").filter(is_active=True)
-    return render(request, "banking/members/list.html", {"account": account, "membership": membership, "memberships": roster})
-
-
-@business_required
+@active_business_employee_required
 @require_POST
-def member_action(request, account_id, membership_id, action):
-    account, membership = _business_context(request, account_id)
-    target = get_object_or_404(account.memberships.select_related("user"), membership_id=membership_id)
+def promote_employee(request, access_id):
     try:
-        if action == "promote":
-            promote_member(request.user, target)
-        elif action == "remove":
-            remove_membership(request.user, target)
-        else:
-            raise BankingError("Unsupported membership action.")
-        messages.success(request, "Membership updated.")
+        promote_member_to_authoriser(request.user, _target_access(request, access_id))
+        messages.success(request, "Employee promoted to AUTHORISER.")
     except BankingError as exc:
         messages.error(request, str(exc))
-    return redirect("business_members", account_id=account.account_id)
+    return redirect("team_access")
 
 
-@business_required
-def business_transactions(request, account_id):
-    account, membership = _business_context(request, account_id)
-    transactions = account.completed_transactions.select_related("transfer_operation", "actor_user")
-    return render(request, "banking/histories/transactions.html", {"account": account, "membership": membership, "transactions": transactions, "scope": "Business"})
+@active_business_employee_required
+@require_POST
+def deactivate_employee(request, access_id):
+    try:
+        deactivate_employee_access(request.user, _target_access(request, access_id))
+        messages.success(request, "Employee access deactivated.")
+    except BankingError as exc:
+        messages.error(request, str(exc))
+    return redirect("team_access")
 
 
-@business_required
-def approval_history(request, account_id):
-    account, membership = _business_context(request, account_id)
-    approvals = account.approval_requests.select_related("requested_by", "actioned_by")
-    return render(request, "banking/histories/approvals.html", {"account": account, "membership": membership, "approvals": approvals})
+@active_business_employee_required
+@require_http_methods(["GET", "POST"])
+def reactivate_employee(request, access_id):
+    target = _target_access(request, access_id)
+    form = TemporaryPasswordForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            reactivate_employee_access(request.user, target, form.cleaned_data["temporary_password1"])
+        except BankingError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Employee access reactivated. Password change is required.")
+            return redirect("team_access")
+    return render(request, "banking/reactivate_employee.html", {"form": form, "target": target})
 
 
-@business_required
-def access_audit(request, account_id):
-    account, membership = _business_context(request, account_id)
-    events = account.access_audit_events.select_related("acting_user", "affected_user")
-    return render(request, "banking/histories/access_audit.html", {"account": account, "membership": membership, "events": events})
+@active_business_employee_required
+def business_transaction_history(request):
+    return render(
+        request,
+        "banking/transaction_history.html",
+        {"account": request.business_account, "access": request.business_access, "transactions": business_transactions(request.user), "scope": "Business", "base_template": "base_business.html"},
+    )
+
+
+@active_business_employee_required
+def approval_history(request):
+    return render(
+        request,
+        "banking/approval_history.html",
+        {"account": request.business_account, "access": request.business_access, "approvals": business_approval_history(request.user)},
+    )
+
+
+@active_business_employee_required
+def access_audit(request):
+    return render(
+        request,
+        "banking/access_audit_history.html",
+        {"account": request.business_account, "access": request.business_access, "events": business_access_audit_history(request.user)},
+    )

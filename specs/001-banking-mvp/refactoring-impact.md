@@ -51,3 +51,13 @@ Implementation tasks must verify:
 - no persisted `APPROVED` status exists;
 - no access-management workflow deletes employee access records through ordinary UI;
 - no password values or password hashes are displayed or stored in audit events.
+
+## Implementation Completion Notes
+
+The v3 implementation replaced the active invitation and multi-membership runtime surface:
+
+- `BusinessInvitation` and `BusinessMembership` models were replaced by `BusinessEmployeeAccess`.
+- Invitation services, invitation routes, invitation templates, invitation registration, and membership services were removed.
+- Business navigation now uses Team Access and no Business Account selector route remains active.
+- Fresh local-development migrations were generated for the v3 schema and the ignored local SQLite database was reset before applying them.
+- Searches across active `users/`, `banking/`, `templates/`, and `static/` paths found no active invitation implementation labels or routes after refactoring; remaining old-model terms only appear in negative regression assertions.

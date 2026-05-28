@@ -5,7 +5,7 @@ from django.db import transaction
 from banking.models import BusinessAccount, CompletedFinancialTransaction, PersonalAccount, TransferOperation
 
 from . import ValidationBankingError
-from .memberships import require_personal_owner
+from .access import require_personal_owner
 from .money import mask_identifier, normalize_phone, normalize_uen, validate_sgd_amount
 
 
@@ -47,8 +47,8 @@ def preview_transfer_recipient(destination_type, identifier, source_account=None
     }
 
 
-def _create_transfer_operation(sender_account, recipient_account, amount, approval_request=None, actor=None):
-    kwargs = {"amount": amount}
+def create_transfer_operation(sender_account, recipient_account, amount, business_outgoing_request=None, actor=None):
+    kwargs = {"amount": amount, "business_outgoing_request": business_outgoing_request}
     if isinstance(sender_account, PersonalAccount):
         kwargs["sender_personal_account"] = sender_account
     else:
@@ -58,14 +58,22 @@ def _create_transfer_operation(sender_account, recipient_account, amount, approv
     else:
         kwargs["recipient_business_account"] = recipient_account
     transfer = TransferOperation.objects.create(**kwargs)
-    debit_kwargs = {"transaction_type": CompletedFinancialTransaction.TRANSFER_DEBIT, "amount": amount, "transfer_operation": transfer}
-    credit_kwargs = {"transaction_type": CompletedFinancialTransaction.TRANSFER_CREDIT, "amount": amount, "transfer_operation": transfer}
-    if approval_request:
-        debit_kwargs["business_approval_request"] = approval_request
-        credit_kwargs["business_approval_request"] = approval_request
-    if actor:
-        debit_kwargs["actor_user"] = actor
-        credit_kwargs["actor_user"] = actor
+    debit_kwargs = {
+        "transaction_type": CompletedFinancialTransaction.TRANSFER_DEBIT,
+        "amount": amount,
+        "transfer_operation": transfer,
+        "business_outgoing_request": business_outgoing_request,
+        "actor_user": actor,
+        "description": "Transfer debit",
+    }
+    credit_kwargs = {
+        "transaction_type": CompletedFinancialTransaction.TRANSFER_CREDIT,
+        "amount": amount,
+        "transfer_operation": transfer,
+        "business_outgoing_request": business_outgoing_request,
+        "actor_user": actor,
+        "description": "Transfer credit",
+    }
     if isinstance(sender_account, PersonalAccount):
         debit_kwargs["personal_account"] = sender_account
     else:
@@ -74,9 +82,7 @@ def _create_transfer_operation(sender_account, recipient_account, amount, approv
         credit_kwargs["personal_account"] = recipient_account
     else:
         credit_kwargs["business_account"] = recipient_account
-    debit = CompletedFinancialTransaction.objects.create(**debit_kwargs)
-    credit = CompletedFinancialTransaction.objects.create(**credit_kwargs)
-    return transfer, debit, credit
+    return transfer, CompletedFinancialTransaction.objects.create(**debit_kwargs), CompletedFinancialTransaction.objects.create(**credit_kwargs)
 
 
 @transaction.atomic
@@ -95,4 +101,4 @@ def transfer_from_personal(actor, personal_account, destination_type, identifier
         recipient_locked = BusinessAccount.objects.select_for_update().get(pk=recipient.pk)
     recipient_locked.balance += amount
     recipient_locked.save(update_fields=["balance"])
-    return _create_transfer_operation(sender, recipient_locked, amount, actor=actor)
+    return create_transfer_operation(sender, recipient_locked, amount, actor=actor)

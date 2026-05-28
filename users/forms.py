@@ -2,8 +2,8 @@ from django import forms
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from banking.models import BusinessAccount, BusinessInvitation, PersonalAccount
-from banking.services.money import normalize_phone, normalize_uen
+from banking.models import BusinessAccount, PersonalAccount
+from banking.services.money import MIN_BUSINESS_BALANCE, normalize_phone, normalize_uen, validate_sgd_amount
 
 
 class EmailAuthenticationForm(forms.Form):
@@ -30,17 +30,17 @@ class EmailAuthenticationForm(forms.Form):
 
 
 class BaseAccessRegistrationForm(UserCreationForm):
-    access_context_value = None
+    login_context_value = None
 
     class Meta:
         model = get_user_model()
         fields = ("email", "username", "password1", "password2")
-        labels = {"email": "Email address", "username": "Username"}
+        labels = {"email": "Email address", "username": "Display name"}
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.access_context_value:
-            self.instance.access_context = self.access_context_value
+        if self.login_context_value:
+            self.instance.login_context = self.login_context_value
         return cleaned_data
 
     def clean_email(self):
@@ -51,15 +51,15 @@ class BaseAccessRegistrationForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        if self.access_context_value:
-            user.access_context = self.access_context_value
+        if self.login_context_value:
+            user.login_context = self.login_context_value
         if commit:
             user.save()
         return user
 
 
 class PersonalRegistrationForm(BaseAccessRegistrationForm):
-    access_context_value = "PERSONAL"
+    login_context_value = "PERSONAL"
     phone_number = forms.CharField(label="Receiving phone number", max_length=32)
 
     class Meta(BaseAccessRegistrationForm.Meta):
@@ -75,37 +75,44 @@ class PersonalRegistrationForm(BaseAccessRegistrationForm):
 
 
 class BusinessRegistrationForm(BaseAccessRegistrationForm):
-    access_context_value = "BUSINESS"
+    login_context_value = "BUSINESS_EMPLOYEE"
     business_display_name = forms.CharField(label="Business display name", max_length=160)
     uen = forms.CharField(label="UEN", max_length=32)
-    opening_deposit = forms.DecimalField(label="Opening deposit", max_digits=12, decimal_places=2)
+    opening_deposit = forms.CharField(label="Opening deposit")
 
     class Meta(BaseAccessRegistrationForm.Meta):
         fields = BaseAccessRegistrationForm.Meta.fields + ("business_display_name", "uen", "opening_deposit")
+
+    def clean_business_display_name(self):
+        value = self.cleaned_data["business_display_name"].strip()
+        if not value:
+            raise forms.ValidationError("Business display name is required.")
+        return value
 
     def clean_uen(self):
         uen = normalize_uen(self.cleaned_data["uen"])
         if not uen:
             raise forms.ValidationError("A UEN is required.")
-        if BusinessAccount.objects.filter(uen=uen).exists():
+        if BusinessAccount.objects.filter(uen__iexact=uen).exists():
             raise forms.ValidationError("This UEN is already registered.")
         return uen
 
+    def clean_opening_deposit(self):
+        try:
+            amount = validate_sgd_amount(self.cleaned_data["opening_deposit"])
+        except Exception as exc:
+            raise forms.ValidationError(str(exc))
+        if amount < MIN_BUSINESS_BALANCE:
+            raise forms.ValidationError("Business opening deposit must be at least SGD 7,000.00.")
+        return amount
 
-class InvitedBusinessRegistrationForm(BaseAccessRegistrationForm):
-    access_context_value = "BUSINESS"
 
-    def __init__(self, *args, invitation=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.invitation = invitation
-        if invitation:
-            self.fields["email"].initial = invitation.invited_email
-            self.fields["email"].disabled = True
+class MandatoryPasswordChangeForm(forms.Form):
+    password1 = forms.CharField(label="New password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirm new password", widget=forms.PasswordInput)
 
-    def clean_email(self):
-        if self.invitation:
-            email = self.invitation.invited_email.lower()
-            if get_user_model().objects.filter(email__iexact=email).exists():
-                raise forms.ValidationError("An account with this invitation email already exists. Sign in to accept it.")
-            return email
-        return super().clean_email()
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("password1") and cleaned.get("password2") and cleaned["password1"] != cleaned["password2"]:
+            raise forms.ValidationError("The two password fields did not match.")
+        return cleaned

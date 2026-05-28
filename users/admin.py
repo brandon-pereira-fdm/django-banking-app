@@ -8,11 +8,11 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
     ordering = ("email",)
-    list_display = ("email", "username", "access_context", "is_staff", "is_active")
+    list_display = ("email", "username", "login_context", "is_staff", "is_active")
     search_fields = ("email", "username")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Display", {"fields": ("username", "access_context")}),
+        ("Display", {"fields": ("username", "login_context")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
@@ -21,7 +21,7 @@ class CustomUserAdmin(UserAdmin):
             None,
             {
                 "classes": ("wide",),
-                "fields": ("email", "username", "access_context", "password1", "password2"),
+                "fields": ("email", "username", "login_context", "password1", "password2"),
             },
         ),
     )

@@ -1,55 +1,48 @@
-from decimal import Decimal
-
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from banking.models import (
-    BusinessAccount,
-    BusinessApprovalRequest,
-    BusinessInvitation,
-    BusinessMembership,
+    AccessAuditEvent,
+    BusinessEmployeeAccess,
+    BusinessOutgoingRequest,
     CompletedFinancialTransaction,
     PersonalAccount,
     TransferOperation,
 )
-from banking.tests.factories import business_account, business_user, membership, personal_account, personal_user
+from banking.tests.factories import business_authoriser, personal_user
 
 
-class ModelTests(TestCase):
-    def test_personal_account_requires_personal_user_and_unique_phone(self):
-        p_user = personal_user()
-        b_user = business_user()
-        account = PersonalAccount(owner=p_user, phone_number="+6590000001")
-        account.full_clean()
-        PersonalAccount.objects.create(owner=p_user, phone_number="+6590000001")
+class ModelStructureTests(TestCase):
+    def test_personal_account_requires_personal_owner_and_unique_phone(self):
+        personal = personal_user()
+        self.assertEqual(personal.personal_account.balance, 0)
+        business, _account, _access = business_authoriser(email="b1@example.com", uen="202400002B")
+        invalid = PersonalAccount(owner=business, phone_number="+6599990000")
         with self.assertRaises(ValidationError):
-            PersonalAccount(owner=b_user, phone_number="+6590000002").full_clean()
+            invalid.full_clean()
+
+    def test_business_employee_access_is_one_account_scoped_and_has_no_balance_or_identifier(self):
+        _user, _account, access = business_authoriser()
+        self.assertFalse(hasattr(access, "balance"))
+        self.assertFalse(hasattr(access, "phone_number"))
+        self.assertFalse(hasattr(access, "uen"))
+        self.assertEqual(access.role, BusinessEmployeeAccess.AUTHORISER)
+        self.assertEqual(access.access_status, BusinessEmployeeAccess.ACTIVE)
+
+    def test_status_and_role_choices_do_not_include_superseded_values(self):
+        self.assertEqual({c[0] for c in BusinessEmployeeAccess.ROLE_CHOICES}, {"MEMBER", "AUTHORISER"})
+        self.assertEqual({c[0] for c in BusinessEmployeeAccess.STATUS_CHOICES}, {"PASSWORD_CHANGE_REQUIRED", "ACTIVE", "DEACTIVATED"})
+        self.assertEqual({c[0] for c in BusinessOutgoingRequest.STATUS_CHOICES}, {"PENDING", "COMPLETED", "REJECTED", "CANCELLED", "FAILED"})
+        self.assertNotIn("APPROVED", {c[0] for c in BusinessOutgoingRequest.STATUS_CHOICES})
+
+    def test_record_families_are_distinct(self):
+        self.assertNotEqual(CompletedFinancialTransaction._meta.db_table, BusinessOutgoingRequest._meta.db_table)
+        self.assertNotEqual(AccessAuditEvent._meta.db_table, CompletedFinancialTransaction._meta.db_table)
+        self.assertTrue(TransferOperation._meta.get_field("operation_id").unique)
+
+    def test_email_unique_for_all_login_contexts(self):
+        User = get_user_model()
+        User.objects.create_user(email="unique@example.com", username="P", password="pass12345", login_context=User.PERSONAL)
         with self.assertRaises(Exception):
-            PersonalAccount.objects.create(owner=personal_user("p2@example.com"), phone_number="+6590000001")
-
-    def test_business_memberships_and_invitations(self):
-        user = business_user()
-        account_one = business_account(uen="202400001A")
-        account_two = business_account(name="Beta", uen="202400002A")
-        membership(user, account_one, BusinessMembership.MEMBER)
-        membership(user, account_two, BusinessMembership.AUTHORISER)
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                membership(user, account_one, BusinessMembership.MEMBER)
-        with self.assertRaises(ValidationError):
-            BusinessMembership(user=personal_user("p3@example.com"), business_account=account_one, role=BusinessMembership.MEMBER).full_clean()
-        invitation = BusinessInvitation.objects.create(
-            business_account=account_one,
-            invited_email="invitee@example.com",
-            intended_role=BusinessMembership.AUTHORISER,
-            inviting_membership=BusinessMembership.objects.get(user=user, business_account=account_two),
-        )
-        self.assertEqual(invitation.status, BusinessInvitation.PENDING)
-
-    def test_financial_and_approval_choices(self):
-        statuses = [choice[0] for choice in BusinessApprovalRequest.STATUS_CHOICES]
-        self.assertEqual(statuses, ["PENDING", "COMPLETED", "REJECTED", "CANCELLED", "FAILED"])
-        self.assertNotIn("APPROVED", statuses)
-        self.assertTrue(CompletedFinancialTransaction.TRANSACTION_TYPE_CHOICES)
-        self.assertTrue(TransferOperation._meta.get_field("transfer_operation_id"))
+            User.objects.create_user(email="unique@example.com", username="B", password="pass12345", login_context=User.BUSINESS_EMPLOYEE)

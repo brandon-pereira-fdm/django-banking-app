@@ -1,0 +1,13 @@
+{% extends account|yesno:"base_business.html,base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="result-panel">
+  <p class="eyebrow">Completed</p>
+  <h1>{{ title }}</h1>
+  {% if transaction %}
+    <p><strong>{{ transaction.transaction_type }}</strong> {{ transaction.amount|sgd }}</p>
+    <p>Transaction ID: <code>{{ transaction.transaction_id }}</code></p>
+  {% endif %}
+  <a class="button secondary" href="{% url 'dashboard' %}">Back to Dashboard</a>
+</section>
+{% endblock %}

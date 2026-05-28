@@ -1,11 +1,10 @@
 from django.contrib import admin
 
 from .models import (
-    BusinessAccessAuditEvent,
+    AccessAuditEvent,
     BusinessAccount,
-    BusinessApprovalRequest,
-    BusinessInvitation,
-    BusinessMembership,
+    BusinessEmployeeAccess,
+    BusinessOutgoingRequest,
     CompletedFinancialTransaction,
     PersonalAccount,
     TransferOperation,
@@ -14,11 +13,10 @@ from .models import (
 
 admin.site.register(PersonalAccount)
 admin.site.register(BusinessAccount)
-admin.site.register(BusinessMembership)
-admin.site.register(BusinessInvitation)
-admin.site.register(BusinessAccessAuditEvent)
-admin.site.register(BusinessApprovalRequest)
+admin.site.register(BusinessEmployeeAccess)
+admin.site.register(BusinessOutgoingRequest)
 admin.site.register(TransferOperation)
+admin.site.register(AccessAuditEvent)
 
 
 @admin.register(CompletedFinancialTransaction)

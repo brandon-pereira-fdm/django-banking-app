@@ -1,0 +1,14 @@
+{% extends "base_business.html" %}
+{% block content %}
+<section class="form-panel">
+  <p class="eyebrow">Security Action</p>
+  <h1>Reactivate Access</h1>
+  <p>{{ target.user.username }} will return to Password Change Required and must choose a private password before normal access.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {{ form.as_p }}
+    <button class="button primary" type="submit">Reactivate Access</button>
+  </form>
+</section>
+{% endblock %}

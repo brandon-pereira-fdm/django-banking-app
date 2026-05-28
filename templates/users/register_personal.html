@@ -1,12 +1,15 @@
 {% extends "base_public.html" %}
+{% block title %}Personal Registration | Midnight Ledger{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>Create Personal Account</h1>
-  <p>Receive funds by unique phone number. Your balance starts at SGD 0.00.</p>
-  <form method="post">{% csrf_token %}
+<section class="form-panel">
+  <p class="eyebrow">Personal Account</p>
+  <h1>Open a Personal Account</h1>
+  <p class="lead">Start at SGD 0.00, receive transfers by unique phone number, and keep Personal access separate from Business access.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
     {% include "includes/form_errors.html" %}
     {{ form.as_p }}
-    <button class="button" type="submit">Create Personal Account</button>
+    <button class="button primary" type="submit">Create Personal Account</button>
   </form>
 </section>
 {% endblock %}

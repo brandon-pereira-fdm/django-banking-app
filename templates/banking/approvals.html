@@ -1,0 +1,9 @@
+{% extends "base_business.html" %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">Approval History</p><h1>Approvals</h1><p>{{ account.business_display_name }} · {{ access.role }}</p></div>
+</header>
+<section class="panel">
+  {% include "banking/partials/approvals_table.html" with approvals=approvals %}
+</section>
+{% endblock %}

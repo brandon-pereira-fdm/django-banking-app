@@ -1,32 +1,27 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
+from django.db import IntegrityError
 from django.test import TestCase
-from django.urls import reverse
 
 
 class AuthenticationTests(TestCase):
-    def test_unique_email_access_contexts_and_password_hashing(self):
+    def test_personal_and_business_employee_identities_use_context_and_hashing(self):
         User = get_user_model()
-        personal = User.objects.create_user(
-            email="same@example.com",
-            username="Pat",
-            password="Str0ngPass123",
-            access_context=User.PERSONAL,
-        )
-        self.assertEqual(personal.access_context, User.PERSONAL)
-        self.assertTrue(personal.check_password("Str0ngPass123"))
-        self.assertNotEqual(personal.password, "Str0ngPass123")
-        with self.assertRaises(Exception):
-            User.objects.create_user(
-                email="same@example.com",
-                username="Biz",
-                password="Str0ngPass123",
-                access_context=User.BUSINESS,
-            )
+        personal = User.objects.create_user(email="p@example.com", username="P", password="pass12345", login_context=User.PERSONAL)
+        business = User.objects.create_user(email="b@example.com", username="B", password="pass12345", login_context=User.BUSINESS_EMPLOYEE)
 
-    def test_valid_and_invalid_sign_in(self):
+        self.assertEqual(personal.login_context, User.PERSONAL)
+        self.assertEqual(business.login_context, User.BUSINESS_EMPLOYEE)
+        self.assertNotEqual(personal.password, "pass12345")
+        self.assertTrue(personal.check_password("pass12345"))
+
+    def test_duplicate_email_rejected_across_contexts(self):
         User = get_user_model()
-        User.objects.create_user(email="pat@example.com", username="Pat", password="Str0ngPass123", access_context=User.PERSONAL)
-        response = self.client.post(reverse("login"), {"email": "pat@example.com", "password": "wrong"})
-        self.assertContains(response, "incorrect", status_code=200)
-        response = self.client.post(reverse("login"), {"email": "pat@example.com", "password": "Str0ngPass123"})
-        self.assertEqual(response.status_code, 302)
+        User.objects.create_user(email="same@example.com", username="P", password="pass12345", login_context=User.PERSONAL)
+        with self.assertRaises(IntegrityError):
+            User.objects.create_user(email="same@example.com", username="B", password="pass12345", login_context=User.BUSINESS_EMPLOYEE)
+
+    def test_authenticate_success_and_failure(self):
+        User = get_user_model()
+        User.objects.create_user(email="p@example.com", username="P", password="pass12345", login_context=User.PERSONAL)
+        self.assertIsNotNone(authenticate(username="p@example.com", password="pass12345"))
+        self.assertIsNone(authenticate(username="p@example.com", password="wrong"))

@@ -2,36 +2,30 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from banking.models import BusinessAccessAuditEvent, BusinessMembership, CompletedFinancialTransaction, PersonalAccount
-from banking.services import ValidationBankingError, register_business_creator, register_personal_user
+from banking.models import AccessAuditEvent, BusinessEmployeeAccess, CompletedFinancialTransaction, PersonalAccount
+from banking.services import BankingError, register_business_account, register_personal_account
 
 
-class RegistrationTests(TestCase):
-    def test_personal_registration_creates_account_at_zero_no_business_access(self):
-        user, account = register_personal_user("Pat", "pat@example.com", "Str0ngPass123", "+65 9123 4567")
-        self.assertEqual(user.access_context, "PERSONAL")
+class RegistrationServiceTests(TestCase):
+    def test_personal_registration_creates_zero_balance_personal_only_account(self):
+        user, account = register_personal_account("P", "p@example.com", "pass12345", "+6590000000")
+        self.assertEqual(user.login_context, "PERSONAL")
         self.assertEqual(account.balance, Decimal("0.00"))
         self.assertEqual(PersonalAccount.objects.count(), 1)
-        self.assertEqual(BusinessMembership.objects.count(), 0)
-        self.assertFalse(CompletedFinancialTransaction.objects.exists())
+        self.assertEqual(CompletedFinancialTransaction.objects.count(), 0)
+        self.assertFalse(hasattr(user, "business_access"))
 
-    def test_business_registration_creates_initial_authoriser_and_audit(self):
-        user, account, membership = register_business_creator(
-            "Biz Creator",
-            "biz@example.com",
-            "Str0ngPass123",
-            "Acme Pte Ltd",
-            "202400001a",
-            "7000.00",
-        )
-        self.assertEqual(user.access_context, "BUSINESS")
-        self.assertEqual(account.uen, "202400001A")
+    def test_business_registration_creates_active_authoriser_opening_transaction_and_audit(self):
+        user, account, access = register_business_account("A", "a@example.com", "pass12345", "Acme", "202400001A", "7000.00")
+        self.assertEqual(user.login_context, "BUSINESS_EMPLOYEE")
         self.assertEqual(account.balance, Decimal("7000.00"))
-        self.assertEqual(membership.role, BusinessMembership.AUTHORISER)
+        self.assertEqual(access.role, BusinessEmployeeAccess.AUTHORISER)
+        self.assertEqual(access.access_status, BusinessEmployeeAccess.ACTIVE)
         self.assertEqual(CompletedFinancialTransaction.objects.get().transaction_type, CompletedFinancialTransaction.BUSINESS_OPENING_DEPOSIT)
-        self.assertEqual(BusinessAccessAuditEvent.objects.count(), 2)
-        self.assertFalse(PersonalAccount.objects.exists())
+        self.assertEqual(AccessAuditEvent.objects.count(), 2)
+        self.assertEqual(PersonalAccount.objects.count(), 0)
 
-    def test_business_registration_rejects_below_minimum(self):
-        with self.assertRaises(ValidationBankingError):
-            register_business_creator("Biz", "biz@example.com", "Str0ngPass123", "Acme", "202400001A", "6999.99")
+    def test_business_opening_below_minimum_rejected_without_partial_creation(self):
+        with self.assertRaises(BankingError):
+            register_business_account("A", "a@example.com", "pass12345", "Acme", "202400001A", "6999.99")
+        self.assertEqual(BusinessEmployeeAccess.objects.count(), 0)

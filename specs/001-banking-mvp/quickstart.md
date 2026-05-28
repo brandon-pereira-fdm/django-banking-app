@@ -50,7 +50,7 @@ Constitution v3.0.0 supersedes invitation acceptance, multi-Business memberships
 5. Generate fresh v3 migrations during implementation.
 6. Recreate sample data through tests or documented setup only.
 
-Do not execute database reset or migration generation during planning.
+During implementation, the ignored local `db.sqlite3` file was reset and fresh v3 migrations were generated and applied. Do not preserve obsolete v2 local data unless you intentionally export it outside this MVP.
 
 ## Database Setup After v3 Implementation
 
@@ -79,6 +79,21 @@ The suite must cover Personal and Business login-context isolation, provisioned 
 
 No invitation or multi-Business Account selector flow should appear.
 
+## Implemented Team Access Walkthrough
+
+1. Sign in as the initial Business AUTHORISER.
+2. Open `Business Dashboard` and then `Team Access`.
+3. Use `Add Employee Access` to create a MEMBER or AUTHORISER with a temporary password.
+4. Give the employee the temporary password through a local MVP handoff channel. It is not stored for later retrieval.
+5. The employee signs in and is routed to the mandatory password-change screen.
+6. After changing password, the employee becomes `ACTIVE` and can use only role-permitted Business functions.
+7. AUTHORISERS can reset another employee's temporary password, promote MEMBER to AUTHORISER, deactivate access, and reactivate access with a new temporary password.
+8. The final active AUTHORISER cannot be deactivated.
+
+## UI Verification Notes
+
+The implemented Midnight Ledger interface includes separate public, Personal, and Business shells; Personal-only and Business-only navigation; summary cards; role and status badges; Team Access; three distinct history pages; visible labels and form errors; keyboard focus styling; and responsive stacking at narrow widths.
+
 ## Static Files
 
 For local Django development, static files can be served by Django when debug mode is enabled. For Waitress-style local execution, collect static files if implementation config requires it:
@@ -105,7 +120,11 @@ http://127.0.0.1:8000/
 waitress-serve --listen=127.0.0.1:8000 bankapp.wsgi:application
 ```
 
-If implementation provides `bankapp/waitress_server.py`, an equivalent local command may be documented there.
+Equivalent helper:
+
+```bash
+python3 bankapp/waitress_server.py
+```
 
 ## Local MVP Disclaimer
 
