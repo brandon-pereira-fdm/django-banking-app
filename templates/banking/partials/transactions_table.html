@@ -1,0 +1,18 @@
+{% load banking_extras %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Type</th><th>Amount</th><th>ID</th><th>Completed</th></tr></thead>
+    <tbody>
+    {% for tx in transactions %}
+      <tr>
+        <td>{{ tx.transaction_type }}</td>
+        <td>{{ tx.amount|sgd }}</td>
+        <td><code>{{ tx.transaction_id }}</code>{% if tx.transfer_operation %}<br><small>Operation {{ tx.transfer_operation.operation_id }}</small>{% endif %}</td>
+        <td>{{ tx.completed_at }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No completed financial movements yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>

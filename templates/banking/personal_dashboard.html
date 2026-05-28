@@ -1,0 +1,24 @@
+{% extends "base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Personal Dashboard</p>
+    <h1>{{ request.user.username }}</h1>
+    <p>Receive transfers by phone number. No minimum balance applies.</p>
+  </div>
+</header>
+<section class="summary-grid">
+  <article class="metric-card hero-metric"><span>Balance</span><strong>{{ account.balance|sgd }}</strong></article>
+  <article class="metric-card"><span>Receiving Phone</span><strong>{{ account.phone_number }}</strong></article>
+</section>
+<section class="action-row">
+  <a class="button primary" href="{% url 'personal_deposit' %}">Deposit</a>
+  <a class="button secondary" href="{% url 'personal_withdraw' %}">Withdraw</a>
+  <a class="button secondary" href="{% url 'personal_transfer' %}">Transfer</a>
+</section>
+<section class="panel">
+  <h2>Recent Transactions</h2>
+  {% include "banking/partials/transactions_table.html" with transactions=transactions %}
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base_business.html" %}
+{% block content %}
+<section class="result-panel">
+  <p class="eyebrow">Employee Access Created</p>
+  <h1>{{ employee_access.user.username }}</h1>
+  <p>{{ employee_access.user.email }} was created as {{ employee_access.role }} and must change the temporary password at first sign-in.</p>
+  <p>No password value is stored or retrievable from this page.</p>
+  <a class="button secondary" href="{% url 'team_access' %}">Back to Team Access</a>
+</section>
+{% endblock %}

@@ -1,3 +1,9 @@
+# Superseded Notice
+
+This checklist belongs to the pre-version-2.0.0 account model, where a Personal Account authorised a Business Account. It is preserved only as a historical artefact.
+
+This file must not be used as an implementation gate. It was replaced by `../checklists/requirements-quality-v2.md`.
+
 # Requirements-Quality Checklist: Banking MVP
 
 **Purpose**: Validate specification completeness, clarity, constitutional
@@ -104,3 +110,76 @@ The specification is strong overall and covers the constitution, banking rules,
 security, traceability, and premium UI/UX direction well. The three blocking
 items above affect transfer behavior, approval workflow testing, and
 constitution compliance, so they should be resolved before `/speckit-plan`.
+
+---
+
+# Requirements-Quality Re-Run: Constitution 1.1.0 Banking MVP
+
+**Purpose**: Re-review the updated specification after constitution amendment
+1.1.0 and clarification updates, with special focus on the three previous
+blocking ambiguities.
+**Created**: 2026-05-25
+**Feature**: [spec.md](../spec.md)
+
+## Amendment 1.1.0 Resolution Checks
+
+- [x] **CHK-RERUN-001**: Are Personal Account transfer recipient requirements clearly defined as unique Personal Account phone numbers rather than user-level phone numbers? **Failure: Blocking** **Result: Resolved** [Clarity, Spec §FR-009 to FR-010, Spec §BR-011, Spec §Personal Account]
+- [x] **CHK-RERUN-002**: Are Business Account transfer recipient requirements clearly defined as unique company UEN values, with Business Accounts explicitly not using phone numbers as incoming transfer identifiers? **Failure: Blocking** **Result: Resolved** [Clarity, Spec §FR-018 to FR-020, Spec §BR-013, Spec §BR-029 to BR-030, Spec §Business Account]
+- [x] **CHK-RERUN-003**: Does the transfer flow require recipient account type selection before identifier entry, so Personal recipients use phone numbers and Business recipients use UENs? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-043 to FR-045, Spec §UX-017, Spec §SC-008]
+- [x] **CHK-RERUN-004**: Is recipient account resolution unambiguous for users who own both account types because identifiers belong to account-specific recipient identity? **Failure: Blocking** **Result: Resolved** [Clarity, Spec §Assumptions, Spec §BR-028 to BR-031, Spec §Key Entities]
+- [x] **CHK-RERUN-005**: Are safe recipient confirmation requirements present before transfer completion or approval submission, without exposing sensitive details? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-049, Spec §SEC-006, Spec §UX-019, Spec §TEST-025]
+
+## Approval Lifecycle Terminology
+
+- [x] **CHK-RERUN-006**: Are Business approval request statuses consistently limited to PENDING, COMPLETED, REJECTED, CANCELLED, and FAILED? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §FR-038, Spec §BR-025 to BR-027, Spec §Business Approval Request]
+- [x] **CHK-RERUN-007**: Does the specification state that approval is an action and not a separate persisted APPROVED status? **Failure: Blocking** **Result: Resolved** [Clarity, Spec §FR-039, Spec §BR-027, Spec §TEST-035]
+- [x] **CHK-RERUN-008**: Are completed financial transactions created only when approval succeeds and money movement completes? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §FR-036 to FR-037, Spec §FR-052 to FR-055, Spec §BR-034 to BR-037]
+- [x] **CHK-RERUN-009**: Are terminal workflow states defined so COMPLETED, REJECTED, CANCELLED, and FAILED requests cannot be actioned again? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-040 to FR-041, Spec §BR-025 to BR-026, User Story 5]
+
+## Multiple Pending Business Requests
+
+- [x] **CHK-RERUN-010**: Does the specification explicitly allow multiple PENDING outgoing Business Account withdrawal or transfer requests at the same time? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-033, Spec §BR-022, Spec §TEST-032]
+- [x] **CHK-RERUN-011**: Are PENDING requests specified as not reserving funds, moving funds, altering displayed balances, or appearing as completed financial transactions? **Failure: Blocking** **Result: Resolved** [Clarity, Spec §FR-031 to FR-032, Spec §BR-021, Spec §TEST-033]
+- [x] **CHK-RERUN-012**: Are approval-time revalidation requirements complete for requested amount, current balance, retained minimum, and authorised Personal Account identity? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-035 to FR-037, Spec §BR-023 to BR-024]
+- [x] **CHK-RERUN-013**: Is the later-failure scenario specified when one completed request causes another PENDING request to fail retained-minimum validation? **Failure: Blocking** **Result: Resolved** [Scenario Coverage, User Story 5 Scenario 8 to 10, Spec §TEST-034, Spec §SC-011]
+
+## Account Identity and Setup
+
+- [x] **CHK-RERUN-014**: Are Business Account requirements complete for business display name, unique UEN, owner, exactly one authorised Personal Account, and opening deposit of at least SGD 7,000.00? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §FR-016 to FR-026, Spec §BR-012 to BR-017, Spec §Business Account]
+- [x] **CHK-RERUN-015**: Are rejection requirements present for missing UEN, duplicate UEN, missing Personal Account prerequisite, and insufficient opening deposit? **Failure: Blocking** **Result: Resolved** [Coverage, Spec §FR-019 to FR-023, User Story 3 Scenario 3 to 6]
+- [x] **CHK-RERUN-016**: Are Personal Account unique phone-number receiving identifier requirements retained after the UEN amendment? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §FR-009 to FR-010, Spec §BR-011, User Story 2 Scenario 1 to 2]
+
+## Transfer and UI Requirements
+
+- [x] **CHK-RERUN-017**: Are transfer UI requirements present for Personal-by-phone and Business-by-UEN recipient selection? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §UX-017 to UX-019, User Story 4]
+- [x] **CHK-RERUN-018**: Are Business Account setup UI requirements updated to request business display name, UEN, opening deposit, and explanatory notices? **Failure: Blocking** **Result: Resolved** [Completeness, Spec §UX-013, User Story 6 Scenario 2, Spec §TEST-047]
+- [x] **CHK-RERUN-019**: Are acceptance scenarios present for duplicate UEN, unknown UEN, identifier-type mismatch, multiple PENDING requests, and approval revalidation failure? **Failure: Blocking** **Result: Resolved** [Scenario Coverage, User Story 3 Scenario 5, User Story 4 Scenario 7 to 10, User Story 5 Scenario 7 to 10]
+- [x] **CHK-RERUN-020**: Are no superseded phone-number-only transfer requirements left in the specification? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §FR-043 to FR-049, Spec §BR-028 to BR-031, Spec §SC-008]
+
+## Constitution 1.1.0 Alignment
+
+- [x] **CHK-RERUN-021**: Does the specification remain aligned with constitution version 1.1.0 for recipient identifiers, UEN uniqueness, safe confirmation, approval lifecycle, and multiple PENDING requests? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §Clarifications, Spec §Banking Rule Coverage, Constitution §III, §VII, §VIII]
+- [x] **CHK-RERUN-022**: Does the specification preserve unchanged constitutional rules for SGD-only money, Personal Account no-minimum-balance behavior, Business Account SGD 7,000.00 opening and retained-minimum rules, transaction UUIDs, transfer operation IDs, security, tests, and traceability? **Failure: Blocking** **Result: Resolved** [Consistency, Spec §BR-001 to BR-039, Spec §TEST-001 to TEST-053, Spec §Traceability Matrix]
+- [x] **CHK-RERUN-023**: Does the specification still avoid implementation architecture, database schema, Django model, view, form, URL, CSS framework, JavaScript framework, and deployment configuration decisions? **Failure: Blocking** **Result: Resolved** [Scope Control, Spec §Assumptions, Spec §Banking Rule Coverage]
+
+## Previous Blocking Issues Status
+
+- **Transfer recipient identification**: Resolved. The specification now separates Personal Account phone numbers from Business Account UENs, requires recipient account type selection, rejects mismatched identifier/type combinations, and makes recipient mapping account-specific and unambiguous.
+- **Business approval lifecycle terminology**: Resolved. The specification consistently uses PENDING, COMPLETED, REJECTED, CANCELLED, and FAILED; approval is an action; no persisted APPROVED status is allowed; completed transaction records are created only when money movement completes.
+- **Multiple Pending Business outgoing requests**: Resolved. The specification allows multiple PENDING requests, states that they do not reserve or move funds, requires independent approval-time revalidation, and defines the later FAILED outcome after another request completes.
+
+## Blocking Ambiguities Found
+
+None found in the reviewed constitution 1.1.0 amendment areas.
+
+## Specification Corrections Required Before Planning
+
+No blocking corrections required before planning. Optional editorial cleanup may archive or supersede the earlier checklist verdict so readers do not mistake the old pre-amendment status for the current readiness state.
+
+## Readiness Verdict
+
+**Ready for `/speckit-plan`.**
+
+The updated specification is constitutionally aligned with version 1.1.0,
+resolves the three previous blocking ambiguities, preserves the approved banking
+rules, and remains technology-agnostic enough for technical planning.

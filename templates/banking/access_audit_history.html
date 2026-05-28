@@ -1,0 +1,24 @@
+{% extends "base_business.html" %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">Access Audit History</p><h1>Security Governance</h1><p>Employee access and security events only. Password values are never shown.</p></div></header>
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Event</th><th>Actor</th><th>Affected Employee</th><th>Outcome</th><th>Created</th></tr></thead>
+      <tbody>
+      {% for event in events %}
+        <tr>
+          <td>{{ event.event_type }}<br><small>{{ event.safe_metadata }}</small></td>
+          <td>{% if event.acting_employee %}{{ event.acting_employee.user.email }}{% else %}System{% endif %}</td>
+          <td>{% if event.affected_employee %}{{ event.affected_employee.user.email }}{% else %}-{% endif %}</td>
+          <td><span class="badge">{{ event.outcome }}</span></td>
+          <td>{{ event.created_at }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No access audit events yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

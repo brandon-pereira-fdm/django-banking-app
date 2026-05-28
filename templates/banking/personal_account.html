@@ -1,0 +1,16 @@
+{% extends "base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Personal Account</p>
+    <h1>Account Detail</h1>
+    <p>Personal funds can be spent down to SGD 0.00, never below zero.</p>
+  </div>
+</header>
+<section class="summary-grid">
+  <article class="metric-card hero-metric"><span>Balance</span><strong>{{ account.balance|sgd }}</strong></article>
+  <article class="metric-card"><span>Transfer Identifier</span><strong>{{ account.phone_number }}</strong></article>
+  <article class="metric-card"><span>Minimum Balance</span><strong>SGD 0.00</strong></article>
+</section>
+{% endblock %}

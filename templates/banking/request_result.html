@@ -1,0 +1,12 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="result-panel">
+  <p class="eyebrow">Pending Approval</p>
+  <h1>{{ title }}</h1>
+  <p>{{ approval.request_type }} for <strong>{{ approval.amount|sgd }}</strong></p>
+  <p>Status: <span class="badge pending">{{ approval.status }}</span></p>
+  <p>Request ID: <code>{{ approval.request_id }}</code></p>
+  <a class="button secondary" href="{% url 'approvals_list' %}">View Approvals</a>
+</section>
+{% endblock %}

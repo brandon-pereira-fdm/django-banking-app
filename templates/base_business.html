@@ -1,0 +1,30 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Business | Midnight Ledger{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/midnight-ledger.css' %}">
+</head>
+<body class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">Midnight Ledger</div>
+    <nav class="nav-list" aria-label="Business navigation">
+      <a href="{% url 'business_dashboard' %}">Business Dashboard</a>
+      <a href="{% url 'business_deposit' %}">Deposit</a>
+      <a href="{% url 'business_withdraw_request' %}">Request Withdrawal</a>
+      <a href="{% url 'business_transfer_request' %}">Request Transfer</a>
+      <a href="{% url 'approvals_list' %}">Approvals</a>
+      <a href="{% url 'team_access' %}">Team Access</a>
+      <a href="{% url 'access_audit' %}">Access Audit</a>
+      <a href="{% url 'business_transactions' %}">Transactions</a>
+      <a href="{% url 'logout' %}">Sign Out</a>
+    </nav>
+  </aside>
+  <main class="app-main">
+    {% include "includes/messages.html" %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

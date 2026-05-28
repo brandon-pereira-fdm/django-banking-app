@@ -1,0 +1,7 @@
+{% extends base_template %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">Transaction History</p><h1>{{ scope }} Transactions</h1><p>Completed financial movements only.</p></div></header>
+<section class="panel">
+  {% include "banking/partials/transactions_table.html" with transactions=transactions %}
+</section>
+{% endblock %}

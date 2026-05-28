@@ -1,0 +1,38 @@
+{% extends "base_business.html" %}
+{% load banking_extras %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Business Dashboard</p>
+    <h1>{{ account.business_display_name }}</h1>
+    <p>UEN {{ account.uen }} · {{ request.user.username }} · <span class="badge">{{ access.role }}</span></p>
+  </div>
+</header>
+<section class="summary-grid">
+  <article class="metric-card hero-metric"><span>Balance</span><strong>{{ account.balance|sgd }}</strong></article>
+  <article class="metric-card"><span>Retained Minimum</span><strong>SGD 7,000.00</strong></article>
+  <article class="metric-card"><span>Pending Requests</span><strong>{{ pending_count }}</strong></article>
+  <article class="metric-card"><span>Access State</span><strong>{{ access.access_status|title }}</strong></article>
+</section>
+{% if team_summary %}
+<section class="panel">
+  <div class="panel-header"><h2>Team Access Summary</h2><a class="button secondary" href="{% url 'team_access' %}">Manage Team Access</a></div>
+  <div class="summary-grid compact">
+    <article class="metric-card"><span>Active Employees</span><strong>{{ team_summary.active_count }}</strong></article>
+    <article class="metric-card"><span>AUTHORISERS</span><strong>{{ team_summary.authoriser_count }}</strong></article>
+    <article class="metric-card"><span>Password Change Required</span><strong>{{ team_summary.password_change_required_count }}</strong></article>
+    <article class="metric-card"><span>Deactivated</span><strong>{{ team_summary.deactivated_count }}</strong></article>
+  </div>
+</section>
+{% endif %}
+<section class="two-column">
+  <div class="panel">
+    <h2>Recent Transactions</h2>
+    {% include "banking/partials/transactions_table.html" with transactions=recent_transactions %}
+  </div>
+  <div class="panel">
+    <h2>Recent Approval Activity</h2>
+    {% include "banking/partials/approvals_table.html" with approvals=recent_requests %}
+  </div>
+</section>
+{% endblock %}

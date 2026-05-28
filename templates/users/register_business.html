@@ -1,0 +1,15 @@
+{% extends "base_public.html" %}
+{% block title %}Business Registration | Midnight Ledger{% endblock %}
+{% block content %}
+<section class="form-panel">
+  <p class="eyebrow">Business Account</p>
+  <h1>Open a Business Account</h1>
+  <p class="lead">Create a company-owned account with an initial AUTHORISER. Employees are provisioned later through Team Access.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {{ form.as_p }}
+    <button class="button primary" type="submit">Create Business Account</button>
+  </form>
+</section>
+{% endblock %}

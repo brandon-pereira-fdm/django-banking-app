@@ -1,0 +1,13 @@
+{% extends "base_personal.html" %}
+{% load banking_extras %}
+{% block content %}
+<section class="result-panel">
+  <p class="eyebrow">Completed Transfer</p>
+  <h1>{{ title }}</h1>
+  <p>Amount: <strong>{{ debit.amount|sgd }}</strong></p>
+  <p>Transfer Operation ID: <code>{{ transfer.operation_id }}</code></p>
+  <p>Debit Transaction: <code>{{ debit.transaction_id }}</code></p>
+  <p>Credit Transaction: <code>{{ credit.transaction_id }}</code></p>
+  <a class="button secondary" href="{% url 'personal_dashboard' %}">Back to Dashboard</a>
+</section>
+{% endblock %}

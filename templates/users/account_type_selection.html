@@ -1,0 +1,30 @@
+{% extends "base_public.html" %}
+{% block title %}Choose Account | Midnight Ledger{% endblock %}
+{% block content %}
+<section class="hero-panel">
+  <p class="eyebrow">Local SGD Banking MVP</p>
+  <h1>Midnight Ledger</h1>
+  <p class="lead">Choose the account product that matches how you receive and manage funds.</p>
+</section>
+<section class="product-grid" aria-label="Account products">
+  <article class="product-card">
+    <h2>Personal Account</h2>
+    <dl>
+      <dt>Receives Transfers By</dt><dd>Phone number</dd>
+      <dt>Opening Requirement</dt><dd>No opening deposit</dd>
+      <dt>Access Model</dt><dd>Individual login</dd>
+    </dl>
+    <a class="button primary" href="{% url 'register_personal' %}">Open Personal Account</a>
+  </article>
+  <article class="product-card">
+    <h2>Business Account</h2>
+    <dl>
+      <dt>Receives Transfers By</dt><dd>UEN</dd>
+      <dt>Opening Requirement</dt><dd>Minimum SGD 7,000.00</dd>
+      <dt>Access Model</dt><dd>Company account with employee access</dd>
+    </dl>
+    <a class="button primary" href="{% url 'register_business' %}">Open Business Account</a>
+  </article>
+</section>
+<p class="auth-link"><a href="{% url 'login' %}">Sign in to an existing login</a></p>
+{% endblock %}
